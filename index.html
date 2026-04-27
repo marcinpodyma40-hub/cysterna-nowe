@@ -168,10 +168,9 @@ input[type=file]{display:none;}
 
     <div class="card" style="border-left:4px solid #f59e0b;">
       <div class="card-title">⛽ Tankowanie pojazdu</div>
-      <div class="row2">
-        <div><label style="margin-top:0">Zatankowano (litry)</label><input type="number" id="tank-litry" placeholder="0.00" inputmode="decimal" oninput="obliczSpalanie();zapiszRoboczy()"></div>
-        <div><label style="margin-top:0">Km przy tankowaniu</label><input type="number" id="tank-km" placeholder="np. 450" inputmode="numeric" oninput="obliczSpalanie();zapiszRoboczy()"></div>
-      </div>
+      <label style="margin-top:0">Zatankowano (litry)</label>
+      <input type="number" id="tank-litry" placeholder="0.00" inputmode="decimal" oninput="obliczSpalanie();zapiszRoboczy()">
+      <p style="font-size:11px;color:#64748b;margin-top:4px;">💡 Spalanie liczy się automatycznie z różnicy Km start ↔ Km koniec</p>
       <div id="spalanie-wynik" style="display:none;" class="stat-box">
         <div class="stat-lab">Spalanie</div>
         <div class="stat-val" id="spal-val">–</div>
@@ -481,7 +480,6 @@ input[type=file]{display:none;}
       <div class="card-title" style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;color:#1e3a8a;text-transform:uppercase;border-bottom:2px solid #e2e8f0;padding-bottom:6px;margin-bottom:10px;">⛽ Tankowanie</div>
       <div class="row2">
         <div><label style="margin-top:0">Litry</label><input type="number" id="edit-tank-litry" inputmode="decimal"></div>
-        <div><label style="margin-top:0">Km przy tankowaniu</label><input type="number" id="edit-tank-km" inputmode="numeric"></div>
       </div>
     </div>
     <div id="edit-produkty-box" style="margin-top:14px;"></div>
@@ -804,8 +802,7 @@ function zapiszRoboczy(){
       naftobazaInna:document.getElementById('naftobaza-inna').value,
       kms:document.getElementById('kms').value,
       kmk:document.getElementById('kmk').value,
-      tankLitry:document.getElementById('tank-litry').value,
-      tankKm:document.getElementById('tank-km').value
+      tankLitry:document.getElementById('tank-litry').value
     };
     if(d.kierowca||d.ciagnik||d.wz||d.kms){
       lsSet('cysterna_roboczy',JSON.stringify(d));
@@ -835,7 +832,6 @@ function wczytajRoboczy(){
     document.getElementById('kms').value=d.kms||'';
     document.getElementById('kmk').value=d.kmk||'';
     document.getElementById('tank-litry').value=d.tankLitry||'';
-    document.getElementById('tank-km').value=d.tankKm||'';
     obliczSpalanie();
     document.getElementById('draft-bar').classList.remove('show');
     alert('✅ Wczytano zapisany wpis!');
@@ -1139,7 +1135,6 @@ function otworzEdycje(idx){
   document.getElementById('edit-kms').value=h.kmStart||'';
   document.getElementById('edit-kmk').value=h.kmKoniec||'';
   document.getElementById('edit-tank-litry').value=(h.tankowanie&&h.tankowanie.litry)||'';
-  document.getElementById('edit-tank-km').value=(h.tankowanie&&h.tankowanie.kmPrzyTankowaniu)||'';
   var pb=document.getElementById('edit-produkty-box'); pb.innerHTML='';
   (h.produkty||[]).forEach(function(p,pi){
     var sec=document.createElement('div'); sec.className='card'; sec.style.borderLeft='4px solid #2563eb'; sec.style.marginTop='12px';
@@ -1189,7 +1184,7 @@ function zapiszEdycje(){
   var kms=parseFloat(document.getElementById('edit-kms').value)||0;
   var kmk=parseFloat(document.getElementById('edit-kmk').value)||0;
   var tankL=parseFloat(document.getElementById('edit-tank-litry').value)||0;
-  var tankKm=parseFloat(document.getElementById('edit-tank-km').value)||0;
+  var dystans=(kms>0&&kmk>kms)?(kmk-kms):0;
   var produkty=(oryg.produkty||[]).map(function(p,pi){
     var palEl=document.getElementById('ep-pal-'+pi);
     var progEl=document.getElementById('ep-prog-'+pi);
@@ -1226,7 +1221,7 @@ function zapiszEdycje(){
       powodUbytku:p.powodUbytku||''
     };
   });
-  var spalanie=tankL>0&&tankKm>0?+(tankL/tankKm*100).toFixed(2):null;
+  var spalanie=tankL>0&&dystans>0?+(tankL/dystans*100).toFixed(2):null;
   var editCiagnik=document.getElementById('edit-ciagnik').value;
   var editNaczepa=document.getElementById('edit-naczepa').value;
   var nowyTs=Date.now();
@@ -1241,7 +1236,7 @@ function zapiszEdycje(){
     wz:document.getElementById('edit-wz').value,
     naftobaza:pobierzNaftobazeEdit(),
     kmStart:kms, kmKoniec:kmk, km:kmk-kms,
-    tankowanie:{litry:tankL,kmPrzyTankowaniu:tankKm,spalanieL100km:spalanie},
+    tankowanie:{litry:tankL,dystansKm:dystans,spalanieL100km:spalanie},
     produkty:produkty,
     ts:nowyTs,
     wersja:poprzedniaWersja+1,
@@ -1288,11 +1283,13 @@ var produktCount=0, selectedProgs={};
 
 function obliczSpalanie(){
   var litry=parseFloat(document.getElementById('tank-litry').value);
-  var tankKm=parseFloat(document.getElementById('tank-km').value);
+  var kms=parseFloat(document.getElementById('kms').value);
+  var kmk=parseFloat(document.getElementById('kmk').value);
   var wynik=document.getElementById('spalanie-wynik');
-  if(tankKm>0&&litry>0){
+  var dystans=(kms>0&&kmk>0&&kmk>kms)?(kmk-kms):0;
+  if(dystans>0&&litry>0){
     wynik.style.display='block';
-    document.getElementById('spal-val').textContent=(litry/tankKm*100).toFixed(1)+' l/100km';
+    document.getElementById('spal-val').textContent=(litry/dystans*100).toFixed(1)+' l/100km';
   } else { wynik.style.display='none'; }
 }
 
@@ -1462,15 +1459,15 @@ function zbudujPayload(powodyUbytkow){
     produktyData.push({nrProduktu:produktyData.length+1,paliwo:pal,program:prog,typProg:typ,grawitacja:grawitacja,zaladunek_RZ:zalRZ,zaladunek_15:zal15,rozlane_RZ:rozRZ,rozlane_15:roz15,normaUbytek:norma,roznica:roznica,roznicaNetto:rozNetto,status:status,powodUbytku:powodUbytku});
   });
   var tankLitry=parseFloat(document.getElementById('tank-litry').value)||0;
-  var tankKm=parseFloat(document.getElementById('tank-km').value)||0;
-  var spalanie=tankLitry>0&&tankKm>0?+(tankLitry/tankKm*100).toFixed(2):null;
+  var dystans=(kms>0&&kmk>kms)?(kmk-kms):0;
+  var spalanie=tankLitry>0&&dystans>0?+(tankLitry/dystans*100).toFixed(2):null;
   var ts=Date.now();
   // AUDIT TRAIL: każdy nowy wpis to wersja 1, brak korekty
   return {
     kierowca:kierowca, ciagnik:ciagnik, naczepa:naczepa, pojazd:pojazd,
     data:data, wz:wz, naftobaza:naftobaza,
     kmStart:kms, kmKoniec:kmk, km:km,
-    tankowanie:{litry:tankLitry,kmPrzyTankowaniu:tankKm,spalanieL100km:spalanie},
+    tankowanie:{litry:tankLitry,dystansKm:dystans,spalanieL100km:spalanie},
     produkty:produktyData,
     ts:ts, wersja:1, koryguje_ts:null, czas_utworzenia:new Date().toISOString()
   };
@@ -1601,7 +1598,7 @@ function wyslijFinalnie(payload){
 }
 
 function resetForm(){
-  ['kierowca','ciagnik','naczepa','wz','kms','kmk','tank-litry','tank-km','naftobaza','naftobaza-inna'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['kierowca','ciagnik','naczepa','wz','kms','kmk','tank-litry','naftobaza','naftobaza-inna'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('naftobaza-inna').style.display='none';
   document.getElementById('naczepa-wrap').style.display='none';
   document.getElementById('btn-dodaj-przyczepe').style.display='block';
