@@ -1,1 +1,2427 @@
-# cysterna-nowe
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cysterna App</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&family=Barlow:wght@400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Barlow',sans-serif;background:#f1f5f9;color:#1e293b;font-size:16px;min-height:100vh;}
+.bar{background:#1e3a8a;border-bottom:3px solid #2563eb;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50;}
+.bar-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:2px;color:#fff;}
+.bar-title span{color:#f59e0b;}
+.tabs{display:flex;gap:3px;flex-wrap:wrap;}
+.tab-btn{background:transparent;color:#93c5fd;border:1px solid #3b82f6;border-radius:6px;padding:6px 10px;font-weight:700;font-size:12px;cursor:pointer;font-family:'Barlow',sans-serif;transition:all .2s;}
+.tab-btn.active{background:#2563eb;color:#fff;border-color:#2563eb;}
+.page{padding:14px;max-width:480px;margin:0 auto;display:none;}
+.page.active{display:block;}
+.hero{background:linear-gradient(135deg,#0f1f3d 0%,#1a3560 100%);border-radius:12px;padding:18px;margin-bottom:16px;}
+.hero h2{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;letter-spacing:2px;color:#fff;}
+.hero p{font-size:12px;color:#94a3b8;margin-top:4px;}
+label{display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-top:14px;margin-bottom:5px;}
+select,input[type=text],input[type=number],input[type=date],input[type=email],input[type=password]{width:100%;padding:11px 12px;font-size:15px;font-family:'Barlow',sans-serif;border:2px solid #e2e8f0;border-radius:8px;background:#fff;color:#1e293b;transition:border-color .2s;}
+select:focus,input:focus{outline:none;border-color:#2563eb;}
+select option{background:#fff;color:#1e293b;}
+textarea{width:100%;padding:10px 12px;font-size:14px;font-family:'Barlow',sans-serif;border:2px solid #e2e8f0;border-radius:8px;background:#fff;color:#1e293b;resize:vertical;min-height:70px;}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.card-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;letter-spacing:1px;color:#1e3a8a;text-transform:uppercase;margin-bottom:12px;border-bottom:2px solid #e2e8f0;padding-bottom:8px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.btn{width:100%;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border:none;border-radius:10px;padding:15px;font-size:17px;font-weight:800;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;margin-top:16px;cursor:pointer;transition:opacity .2s;}
+.btn:hover{opacity:.9;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn-green{background:linear-gradient(135deg,#059669,#10b981);}
+.btn-add{width:100%;background:#eff6ff;color:#1d4ed8;border:2px dashed #93c5fd;border-radius:10px;padding:11px;font-size:15px;font-weight:700;font-family:'Barlow',sans-serif;margin-top:10px;cursor:pointer;}
+.btn-sm{background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:6px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Barlow',sans-serif;}
+.btn-remove{background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;float:right;font-weight:700;}
+.prog-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px;}
+.prog{padding:10px 0;font-size:15px;font-weight:700;border:2px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#64748b;cursor:pointer;text-align:center;transition:all .2s;}
+.prog.on{background:#1e3a8a;border-color:#1e3a8a;color:#fff;}
+.section-bg{background:#f8fafc;border-radius:8px;padding:12px;margin-top:12px;border:1px solid #e2e8f0;}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.ok{text-align:center;padding:40px 20px;}
+.ok-ico{font-size:64px;margin-bottom:16px;}
+.stat-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;margin-top:10px;}
+.stat-val{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:#1e3a8a;}
+.stat-lab{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;}
+.lock-screen{position:fixed;inset:0;background:#f1f5f9;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;}
+.lock-screen h2{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:#1e3a8a;margin-bottom:6px;letter-spacing:2px;}
+.lock-screen p{color:#64748b;font-size:14px;margin-bottom:24px;text-align:center;}
+.lock-err{color:#ef4444;font-size:13px;margin-top:8px;text-align:center;font-weight:700;}
+.offline-bar{background:#f59e0b;color:#fff;text-align:center;padding:8px;font-weight:700;font-size:13px;display:none;}
+.offline-bar.show{display:block;}
+.draft-bar{background:#3b82f6;color:#fff;text-align:center;padding:6px;font-size:12px;display:none;cursor:pointer;}
+.draft-bar.show{display:block;}
+.backup-bar{background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;text-align:center;padding:10px 8px;font-weight:700;font-size:13px;display:none;cursor:pointer;line-height:1.4;}
+.backup-bar.show{display:block;}
+.backup-bar.urgent{background:linear-gradient(90deg,#dc2626,#ef4444);}
+.backup-bar small{display:block;font-weight:400;font-size:11px;opacity:.9;margin-top:2px;}
+.val-box{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;margin-top:10px;display:none;}
+.val-box ul{margin-left:16px;margin-top:4px;}
+.val-box li{font-size:13px;color:#b91c1c;margin-bottom:3px;}
+.hist-item{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.hist-item h4{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;color:#1e3a8a;}
+.hist-meta{font-size:12px;color:#64748b;margin-top:2px;margin-bottom:8px;}
+.hist-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-right:4px;}
+.hist-offline{background:#fef3c7;color:#92400e;}
+.hist-sent{background:#dbeafe;color:#1e40af;}
+input[type=file]{display:none;}
+.koszt-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;}
+.koszt-row select{flex:1;min-width:120px;}
+.koszt-row input[type=number]{flex:.8;min-width:80px;}
+.koszt-row .del-btn{background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;padding:9px 10px;cursor:pointer;font-size:14px;}
+.koszt-sum{background:#eff6ff;border-radius:8px;padding:12px 14px;margin-top:10px;border:1px solid #bfdbfe;display:flex;justify-content:space-between;align-items:center;}
+.kalk-result{background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-top:12px;}
+.kalk-result .big{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;color:#166634;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0;}
+.modal-box{background:#f1f5f9;border-radius:16px;width:100%;max-width:460px;margin:auto;padding:16px;position:relative;}
+.modal-close{position:absolute;top:14px;right:14px;background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;padding:6px 12px;font-weight:800;cursor:pointer;font-size:14px;z-index:1;}
+.pin-overlay{position:fixed;inset:0;background:#f1f5f9;z-index:150;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;}
+.pin-overlay h2{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:#1e3a8a;margin-bottom:6px;letter-spacing:2px;}
+.pin-overlay p{color:#64748b;font-size:14px;margin-bottom:24px;text-align:center;}
+.pin-dots{display:flex;gap:12px;margin-bottom:24px;}
+.pin-dot{width:18px;height:18px;border-radius:50%;border:2px solid #94a3b8;background:transparent;transition:all .2s;}
+.pin-dot.filled{background:#1e3a8a;border-color:#1e3a8a;}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:260px;width:100%;}
+.pin-key{padding:18px;font-size:22px;font-weight:800;font-family:'Barlow Condensed',sans-serif;border:2px solid #e2e8f0;border-radius:12px;background:#fff;color:#1e293b;cursor:pointer;text-align:center;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.pin-key:active{background:#1e3a8a;color:#fff;border-color:#1e3a8a;transform:scale(.95);}
+.pin-key.del{background:#fee2e2;color:#b91c1c;border-color:#fecaca;}
+.pin-err{color:#ef4444;font-size:13px;font-weight:700;margin-top:12px;min-height:20px;text-align:center;}
+.kierowca-btn{padding:14px 8px;font-size:15px;font-weight:800;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#475569;cursor:pointer;transition:all .2s;width:100%;}
+.kierowca-btn.active{background:#1e3a8a;border-color:#1e3a8a;color:#fff;}
+.mail-car{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px;}
+.mail-car h3{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;color:#1e3a8a;margin-bottom:2px;}
+.mail-car .reg{font-size:12px;color:#64748b;margin-bottom:10px;}
+.gmail-btn{display:block;width:100%;padding:12px;background:#ea4335;color:#fff;border:none;border-radius:8px;font-weight:800;font-size:15px;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;cursor:pointer;text-align:center;text-decoration:none;}
+</style>
+</head>
+<body>
+
+<div class="offline-bar" id="offline-bar">⚠️ BRAK INTERNETU – dane zapisane lokalnie, wyślemy automatycznie gdy wróci zasięg</div>
+<div class="backup-bar" id="backup-bar" onclick="zrobBackupTeraz()">🔔 <b>PORA NA BACKUP FINANSÓW</b><small>Kliknij aby pobrać plik – potem wyślij go mailem do siebie</small></div>
+<div class="draft-bar" id="draft-bar" onclick="wczytajRoboczy()">📝 Masz niezapisany wpis – kliknij aby wczytać</div>
+
+<div class="lock-screen" id="lock-screen" style="display:none;">
+  <div style="font-size:48px;margin-bottom:16px;">🔐</div>
+  <h2>PANEL BIURA</h2>
+  <p>Dostęp tylko dla administratora.<br>Wpisz hasło aby kontynuować.</p>
+  <input type="password" id="haslo-input" placeholder="Hasło..." style="max-width:300px;text-align:center;" onkeydown="if(event.key==='Enter')sprawdzHaslo()">
+  <button class="btn" style="max-width:300px;margin-top:10px;" onclick="sprawdzHaslo()">🔓 WEJDŹ</button>
+  <div class="lock-err" id="lock-err"></div>
+  <button onclick="anulujBiuro()" style="margin-top:16px;background:transparent;color:#64748b;border:none;cursor:pointer;font-size:14px;">← Wróć</button>
+</div>
+
+<div class="bar">
+  <div class="bar-title">🚛 CYSTERNA<span>.</span>APP</div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="goTab('form')" id="tb-form">📋 Trasa</button>
+    <button class="tab-btn" onclick="goTab('hist')" id="tb-hist">📜 Historia</button>
+    <button class="tab-btn" onclick="goTab('mail')" id="tb-mail">📧 Poczta</button>
+    <button class="tab-btn" onclick="goTab('admin')" id="tb-admin">🏢 Biuro</button>
+  </div>
+</div>
+<!-- FORMULARZ -->
+<div class="page active" id="tab-form">
+  <div id="form-main">
+    <div class="hero"><h2>NOWY WPIS</h2><p>Wypełnij dane po zakończeniu trasy</p></div>
+    <div class="val-box" id="val-box"><b style="color:#b91c1c;">❌ Uzupełnij brakujące pola:</b><ul id="val-list"></ul></div>
+
+    <label>Kierowca *</label>
+    <select id="kierowca" onchange="zapiszRoboczy()">
+      <option value="">– wybierz –</option>
+    </select>
+
+    <label>Ciągnik *</label>
+    <select id="ciagnik" onchange="zapiszRoboczy()">
+      <option value="">– wybierz –</option>
+    </select>
+
+    <div id="naczepa-wrap" style="display:none;">
+      <label>Przyczepa <button type="button" onclick="usunPrzyczepe()" style="float:right;background:transparent;border:none;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;">✕ Usuń</button></label>
+      <select id="naczepa" onchange="zapiszRoboczy()">
+        <option value="">– wybierz przyczepę –</option>
+      </select>
+    </div>
+    <button type="button" id="btn-dodaj-przyczepe" class="btn-add" style="margin-top:10px;" onclick="dodajPrzyczepe()">+ Przyczepa</button>
+
+    <label>Data trasy *</label>
+    <input type="date" id="data" onchange="zapiszRoboczy()">
+
+    <label>Nr dokumentu WZ *</label>
+    <input type="text" id="wz" placeholder="np. WZ/2025/0123" oninput="zapiszRoboczy()">
+
+    <label>Naftobaza (miejsce załadunku) *</label>
+    <select id="naftobaza" onchange="naftobazaZmien();zapiszRoboczy()">
+      <option value="">– wybierz –</option>
+      <option value="Rejowiec">Naftobaza Rejowiec</option>
+      <option value="Poznań">Naftobaza Poznań</option>
+      <option value="Nowa Wieś">Naftobaza Nowa Wieś</option>
+      <option value="Inna">Inna...</option>
+    </select>
+    <input type="text" id="naftobaza-inna" placeholder="Wpisz nazwę naftobazy..." style="margin-top:8px;display:none;" oninput="zapiszRoboczy()">
+
+    <div class="row2" style="margin-top:14px;">
+      <div><label style="margin-top:0">Km start *</label><input type="number" id="kms" placeholder="0" inputmode="numeric" oninput="obliczSpalanie();zapiszRoboczy()"></div>
+      <div><label style="margin-top:0">Km koniec *</label><input type="number" id="kmk" placeholder="0" inputmode="numeric" oninput="obliczSpalanie();zapiszRoboczy()"></div>
+    </div>
+
+    <div class="card" style="border-left:4px solid #f59e0b;">
+      <div class="card-title">⛽ Tankowanie pojazdu</div>
+      <div class="row2">
+        <div><label style="margin-top:0">Zatankowano (litry)</label><input type="number" id="tank-litry" placeholder="0.00" inputmode="decimal" oninput="obliczSpalanie();zapiszRoboczy()"></div>
+        <div><label style="margin-top:0">Km przy tankowaniu</label><input type="number" id="tank-km" placeholder="np. 450" inputmode="numeric" oninput="obliczSpalanie();zapiszRoboczy()"></div>
+      </div>
+      <div id="spalanie-wynik" style="display:none;" class="stat-box">
+        <div class="stat-lab">Spalanie</div>
+        <div class="stat-val" id="spal-val">–</div>
+      </div>
+    </div>
+
+    <div id="produkty"></div>
+    <button class="btn-add" onclick="dodajProdukt()" id="btn-dodaj">+ Dodaj produkt</button>
+    <button class="btn" onclick="wyslij()" id="btn-wyslij">✓ WYŚLIJ DANE</button>
+    <div style="height:24px"></div>
+  </div>
+
+  <div id="ok-screen" style="display:none;" class="ok">
+    <div class="ok-ico" id="ok-ico">✅</div>
+    <h2 style="color:#059669;font-family:'Barlow Condensed',sans-serif;font-size:32px;letter-spacing:2px;" id="ok-title">WYSŁANO!</h2>
+    <p style="color:#64748b;margin-bottom:8px;margin-top:8px;" id="ok-msg">Dane zapisane!</p>
+    <div id="ok-offline-info" style="display:none;background:#fef3c7;border-radius:8px;padding:10px;margin-bottom:16px;font-size:13px;color:#92400e;">
+      📴 Brak internetu – dane zapisane na telefonie. Wyślemy automatycznie gdy wróci zasięg.
+    </div>
+    <button class="btn btn-green" style="width:auto;padding:12px 32px;" onclick="resetForm()">+ Nowy wpis</button>
+    <button class="btn" style="width:auto;padding:12px 32px;margin-left:8px;" onclick="goTab('hist')">📜 Historia</button>
+  </div>
+</div>
+
+<!-- HISTORIA -->
+<div class="page" id="tab-hist">
+  <div class="hero"><h2>📜 HISTORIA TRAS</h2><p>Wybierz kierowcę aby zobaczyć jego trasy</p></div>
+  <div class="card" style="border-left:4px solid #2563eb;">
+    <div class="card-title">👤 Kto przeglądasz?</div>
+    <div id="hist-kierowcy-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+  </div>
+  <div id="hist-stats" style="display:none;" class="card">
+    <div class="card-title" id="hist-stats-title">Statystyki</div>
+    <div class="row3">
+      <div style="text-align:center;"><div class="stat-lab">Trasy</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:#1e3a8a;" id="stat-trasy">0</div></div>
+      <div style="text-align:center;"><div class="stat-lab">Łącznie km</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:#1e3a8a;" id="stat-km">0</div></div>
+      <div style="text-align:center;"><div class="stat-lab">Śr. spalanie</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:#f59e0b;" id="stat-spal">–</div></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:12px;margin-bottom:4px;">
+    <button class="btn-sm" onclick="renderHistoria()">🔄 Odśwież</button>
+    <button class="btn-sm" style="background:#fee2e2;color:#b91c1c;" onclick="wyczyscHistorie()">🗑️ Wyczyść</button>
+  </div>
+  <div id="historia-list"><p style="color:#94a3b8;text-align:center;padding:30px;">Wybierz kierowcę powyżej</p></div>
+</div>
+
+<!-- POCZTA -->
+<div class="page" id="tab-mail">
+  <div class="hero"><h2>📧 SKRZYNKA GMAIL</h2><p>Otwórz skrzynkę odbiorczą pojazdu</p></div>
+  <div id="mail-list"></div>
+</div>
+
+<!-- BIURO -->
+<div class="page" id="tab-admin">
+  <div class="hero"><h2>🏢 PANEL BIURA</h2><p>Dane, koszty, rozliczenia</p></div>
+
+  <!-- ===== MODUŁ FINANSE (prywatne, tylko lokalnie) ===== -->
+  <div class="card" style="border-left:4px solid #7c3aed;background:linear-gradient(180deg,#faf5ff 0%,#fff 100%);">
+    <div class="card-title" style="color:#6d28d9;display:flex;justify-content:space-between;align-items:center;">
+      <span>💳 FINANSE</span>
+      <span style="background:#ede9fe;color:#5b21b6;font-size:10px;padding:3px 8px;border-radius:4px;font-weight:800;">🔒 PRYWATNE • TYLKO TEN TELEFON</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;">
+      <button class="btn-sm" id="fin-tab-tx" style="padding:10px 4px;background:#ede9fe;color:#5b21b6;font-weight:800;" onclick="finPrzelacz('tx')">💸 Transakcje</button>
+      <button class="btn-sm" id="fin-tab-bud" style="padding:10px 4px;" onclick="finPrzelacz('bud')">🎯 Budżety</button>
+      <button class="btn-sm" id="fin-tab-ana" style="padding:10px 4px;" onclick="finPrzelacz('ana')">📊 Analiza</button>
+      <button class="btn-sm" id="fin-tab-eks" style="padding:10px 4px;" onclick="finPrzelacz('eks')">💾 Eksport</button>
+    </div>
+
+    <!-- TRANSAKCJE -->
+    <div id="fin-panel-tx">
+      <div class="section-bg" style="background:#faf5ff;border-color:#ddd6fe;">
+        <div class="section-label" style="color:#6d28d9;">➕ Nowa transakcja</div>
+        <div class="row2">
+          <div><label style="margin-top:4px;">Data</label><input type="date" id="tx-data"></div>
+          <div><label style="margin-top:4px;">Kwota brutto (zł) *</label><input type="number" id="tx-brutto" placeholder="0.00" inputmode="decimal" step="0.01" oninput="txProponuj()"></div>
+        </div>
+        <div class="row2">
+          <div><label style="margin-top:4px;">Stawka VAT</label>
+            <select id="tx-vat" onchange="txObliczNetto()">
+              <option value="23">23%</option>
+              <option value="8">8%</option>
+              <option value="5">5%</option>
+              <option value="0">0%</option>
+              <option value="ZW">ZW (zwolnione)</option>
+              <option value="NP">NP (nie podlega)</option>
+            </select>
+          </div>
+          <div><label style="margin-top:4px;">Netto</label><input type="number" id="tx-netto" placeholder="auto" step="0.01" readonly style="background:#f8fafc;"></div>
+        </div>
+        <label>Dostawca / kontrahent</label>
+        <input type="text" id="tx-dostawca" placeholder="np. PKN Orlen, BP, Lukoil..." oninput="txProponuj()">
+        <label>Opis / nr faktury</label>
+        <input type="text" id="tx-opis" placeholder="np. FV/2026/0123 – tankowanie ON" oninput="txProponuj()">
+        <label>Kategoria *
+          <span id="tx-sugestia" style="float:right;color:#6d28d9;font-size:11px;font-weight:700;display:none;cursor:pointer;" onclick="txAkceptujSugestie()">💡 sugestia: <span id="tx-sugestia-tekst"></span></span>
+        </label>
+        <select id="tx-kategoria"></select>
+        <div class="row2">
+          <div><label style="margin-top:4px;">Pojazd (opcjonalnie)</label>
+            <select id="tx-pojazd"><option value="">– brak / cała firma –</option></select>
+          </div>
+          <div><label style="margin-top:4px;">Sposób płatności</label>
+            <select id="tx-platnosc">
+              <option value="Karta firmowa">Karta firmowa</option>
+              <option value="Przelew">Przelew</option>
+              <option value="Gotówka">Gotówka</option>
+              <option value="BLIK">BLIK</option>
+              <option value="Karta paliwowa">Karta paliwowa</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-green" onclick="txZapisz()" style="margin-top:12px;">💾 ZAPISZ TRANSAKCJĘ</button>
+      </div>
+
+      <div style="display:flex;gap:6px;margin-top:14px;align-items:center;flex-wrap:wrap;">
+        <input type="text" id="tx-szukaj" placeholder="🔍 szukaj..." style="flex:2;min-width:120px;padding:8px;font-size:14px;" oninput="renderujTransakcje()">
+        <select id="tx-filtr-kat" onchange="renderujTransakcje()" style="flex:1;min-width:100px;padding:8px;font-size:14px;"><option value="">Wszystkie kategorie</option></select>
+        <select id="tx-filtr-miesiac" onchange="renderujTransakcje()" style="flex:1;min-width:100px;padding:8px;font-size:14px;"><option value="">Wszystkie miesiące</option></select>
+      </div>
+      <div id="tx-podsumowanie" style="background:#f5f3ff;border-radius:8px;padding:10px;margin-top:8px;font-size:13px;color:#5b21b6;font-weight:700;display:none;"></div>
+      <div id="tx-lista" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- BUDŻETY -->
+    <div id="fin-panel-bud" style="display:none;">
+      <div style="background:#fef3c7;border-radius:8px;padding:10px;font-size:12px;color:#854d0e;line-height:1.4;margin-bottom:10px;">
+        💡 Ustal miesięczny limit dla każdej kategorii. Pasek pokazuje ile już wydałeś w bieżącym miesiącu. Po przekroczeniu 80% – ostrzeżenie, 100% – alarm.
+      </div>
+      <label style="margin-top:0;">Miesiąc analizy</label>
+      <input type="month" id="bud-miesiac" onchange="renderujBudzety()">
+      <div id="bud-lista" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- ANALIZA -->
+    <div id="fin-panel-ana" style="display:none;">
+      <label style="margin-top:0;">Zakres analizy</label>
+      <div class="row2">
+        <div><input type="month" id="ana-od"></div>
+        <div><input type="month" id="ana-do"></div>
+      </div>
+      <button class="btn-sm" onclick="renderujAnalize()" style="width:100%;background:#ede9fe;color:#5b21b6;font-weight:800;padding:10px;margin-top:8px;">🔄 Przelicz analizę</button>
+      <div id="ana-wynik" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- EKSPORT -->
+    <div id="fin-panel-eks" style="display:none;">
+      <div style="background:#fee2e2;border-radius:8px;padding:10px;font-size:12px;color:#991b1b;line-height:1.5;margin-bottom:12px;">
+        ⚠️ <b>Backup jest Twoją odpowiedzialnością.</b> Wyczyszczenie pamięci przeglądarki = utrata danych. Eksportuj regularnie i przechowuj plik na dysku/Drive/email do siebie.
+      </div>
+      <button class="btn btn-green" onclick="finEksportJSON()" style="margin-top:0;">📥 Eksport pełny (JSON)</button>
+      <div id="backup-status" style="margin-top:10px;padding:10px;border-radius:8px;font-size:12px;line-height:1.5;text-align:center;"></div>
+      <button class="btn-sm" onclick="finEksportCSV()" style="width:100%;padding:14px;margin-top:8px;background:#dbeafe;color:#1e40af;font-weight:800;">📊 Eksport transakcji (CSV dla księgowej)</button>
+      <div style="background:#f0fdf4;border-radius:8px;padding:10px;font-size:12px;color:#166534;margin-top:12px;line-height:1.5;">
+        💡 <b>CSV</b> otwiera się w Excelu i Google Sheets. Format: Data ; Dostawca ; Opis ; Kategoria ; Pojazd ; Brutto ; Netto ; VAT ; Płatność.
+      </div>
+      <hr style="margin:20px 0;border:none;border-top:1px solid #e2e8f0;">
+      <label style="margin-top:0;color:#b91c1c;">Import z pliku JSON (zastąpi obecne dane)</label>
+      <input type="file" id="fin-import-input" accept=".json" style="display:block;margin-top:8px;">
+      <button class="btn-sm" onclick="finImportJSON()" style="width:100%;padding:12px;margin-top:8px;background:#fef3c7;color:#92400e;font-weight:800;">📤 Importuj wybrany plik</button>
+      <hr style="margin:20px 0;border:none;border-top:1px solid #e2e8f0;">
+      <button class="btn-sm" onclick="finResetuj()" style="width:100%;padding:12px;background:#fee2e2;color:#991b1b;font-weight:800;">🗑️ Wyczyść wszystkie dane finansowe</button>
+    </div>
+  </div>
+  <!-- ===== KONIEC FINANSE ===== -->
+
+  <div class="card" style="border-left:4px solid #2563eb;">
+    <div class="card-title">🚛 Ciągniki</div>
+    <div id="ciagniki-list"></div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <input type="text" id="nowy-ciagnik" placeholder="Nr rej. ciągnika np. PO6S361" style="flex:1;text-transform:uppercase;">
+      <button class="btn-sm" style="background:#dbeafe;color:#1e40af;padding:11px 14px;font-weight:800;" onclick="dodajCiagnik()">+ Dodaj</button>
+    </div>
+  </div>
+
+  <div class="card" style="border-left:4px solid #f59e0b;">
+    <div class="card-title">🔗 Naczepy / przyczepy</div>
+    <div id="naczepy-list"></div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <input type="text" id="nowa-naczepa" placeholder="Nr rej. naczepy np. PKN472XC" style="flex:1;text-transform:uppercase;">
+      <button class="btn-sm" style="background:#fef3c7;color:#92400e;padding:11px 14px;font-weight:800;" onclick="dodajNaczepe()">+ Dodaj</button>
+    </div>
+  </div>
+
+  <div class="card" style="border-left:4px solid #10b981;">
+    <div class="card-title">👷 Kierowcy</div>
+    <div id="kierowcy-list"></div>
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+      <input type="text" id="nowy-kierowca" placeholder="Imię np. Marcin" style="flex:2;min-width:140px;">
+      <input type="text" id="nowy-kierowca-pin" placeholder="PIN (4 cyfry)" inputmode="numeric" maxlength="4" pattern="\d{4}" style="flex:1;min-width:100px;text-align:center;letter-spacing:4px;">
+      <button class="btn-sm" style="background:#d1fae5;color:#065f46;padding:11px 14px;font-weight:800;width:100%;" onclick="dodajKierowce()">+ Dodaj kierowcę</button>
+    </div>
+    <p style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.4;">PIN będzie kierowcy potrzebny do otwarcia jego historii tras.</p>
+  </div>
+
+  <div class="card" style="border-left:4px solid #10b981;text-align:center;">
+    <div class="card-title" style="color:#059669;">📊 Google Sheets</div>
+    <a href="https://docs.google.com/spreadsheets/d/1PSgKxHIP-hN9-urvQ9CIBcGyMB_kMA-kFvWlg3TVX-8/edit" target="_blank"
+      style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border-radius:8px;padding:12px 24px;font-weight:800;font-size:15px;text-decoration:none;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">
+      📊 OTWÓRZ ARKUSZ
+    </a>
+  </div>
+
+  <div class="card" style="border-left:4px solid #8b5cf6;">
+    <div class="card-title">🧮 Kalkulator rozliczenia kierowcy</div>
+    <label style="margin-top:0">Kierowca</label>
+    <select id="kalk-kierowca"><option value="">– wybierz –</option></select>
+    <div class="row2">
+      <div><label style="margin-top:0">Km w miesiącu</label><input type="number" id="kalk-km" placeholder="0" oninput="obliczRozliczenie()"></div>
+      <div><label style="margin-top:0">Stawka km (zł)</label><input type="number" id="kalk-stawka" placeholder="0.00" value="0.50" oninput="obliczRozliczenie()"></div>
+    </div>
+    <div class="row2">
+      <div><label style="margin-top:0">Dni w trasie</label><input type="number" id="kalk-dni" placeholder="0" oninput="obliczRozliczenie()"></div>
+      <div><label style="margin-top:0">Dieta dzienna (zł)</label><input type="number" id="kalk-dieta" placeholder="45" value="45" oninput="obliczRozliczenie()"></div>
+    </div>
+    <div class="row2">
+      <div><label style="margin-top:0">Premia (zł)</label><input type="number" id="kalk-premia" placeholder="0" oninput="obliczRozliczenie()"></div>
+      <div><label style="margin-top:0">Potrącenia (zł)</label><input type="number" id="kalk-potracenia" placeholder="0" oninput="obliczRozliczenie()"></div>
+    </div>
+    <div class="kalk-result" id="kalk-result" style="display:none;">
+      <div class="stat-lab">Łącznie do wypłaty</div>
+      <div class="big" id="kalk-suma">0,00 zł</div>
+      <div style="margin-top:10px;font-size:13px;color:#374151;" id="kalk-szczeg"></div>
+    </div>
+  </div>
+
+  <div class="card" style="border-left:4px solid #f59e0b;">
+    <div class="card-title">🛢️ Zakup paliwa</div>
+    <label style="margin-top:0">Data zakupu</label><input type="date" id="zp-data">
+    <label>Rodzaj paliwa</label>
+    <select id="zp-rodzaj"><option value="">– wybierz –</option><option>ON – Olej napędowy</option><option>PB95 – Benzyna</option><option>Olej opałowy</option></select>
+    <div class="row2">
+      <div><label style="margin-top:0">Cena brutto (zł/l)</label><input type="number" id="zp-brutto" placeholder="0.00" oninput="obliczZakup()"></div>
+      <div><label style="margin-top:0">Cena netto (zł/l)</label><input type="number" id="zp-netto" placeholder="0.00" oninput="obliczZakup()"></div>
+    </div>
+    <div class="row2">
+      <div><label style="margin-top:0">Ilość RZ (litry)</label><input type="number" id="zp-rz" placeholder="0" oninput="obliczZakup()"></div>
+      <div><label style="margin-top:0">Ilość 15°C (litry)</label><input type="number" id="zp-15" placeholder="0" oninput="obliczZakup()"></div>
+    </div>
+    <div id="zp-wynik" style="display:none;" class="stat-box">
+      <div class="row3">
+        <div><div class="stat-lab">Wartość brutto</div><div style="font-weight:800;font-size:16px;" id="zp-wbr">–</div></div>
+        <div><div class="stat-lab">Wartość netto</div><div style="font-weight:800;font-size:16px;" id="zp-wne">–</div></div>
+        <div><div class="stat-lab">VAT</div><div style="font-weight:800;font-size:16px;color:#ef4444;" id="zp-vat">–</div></div>
+      </div>
+    </div>
+    <label>Dostawca / Uwagi</label>
+    <textarea id="zp-uwagi" placeholder="np. PKN Orlen, faktura nr..."></textarea>
+    <button class="btn btn-green" onclick="zapiszZakup()">💾 ZAPISZ ZAKUP</button>
+  </div>
+
+  <div class="card" style="border-left:4px solid #3b82f6;">
+    <div class="card-title">📌 Koszty stałe</div>
+    <div id="koszty-stale-list"></div>
+    <button class="btn-add" onclick="dodajKoszt('stale')">+ Dodaj koszt stały</button>
+    <div class="koszt-sum"><span style="color:#475569;font-size:14px;">SUMA STAŁE:</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#1e3a8a;" id="suma-stale">0,00 zł</span></div>
+  </div>
+
+  <div class="card" style="border-left:4px solid #f97316;">
+    <div class="card-title">🔄 Koszty zmienne</div>
+    <div id="koszty-zmienne-list"></div>
+    <button class="btn-add" onclick="dodajKoszt('zmienne')">+ Dodaj koszt zmienny</button>
+    <div class="koszt-sum"><span style="color:#475569;font-size:14px;">SUMA ZMIENNE:</span><span style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#ea580c;" id="suma-zmienne">0,00 zł</span></div>
+  </div>
+
+  <div class="card" style="border-left:4px solid #1e3a8a;text-align:center;margin-bottom:20px;">
+    <div class="stat-lab" style="margin-bottom:4px;">ŁĄCZNE KOSZTY TRANSPORTU</div>
+    <div class="stat-val" style="font-size:40px;" id="suma-total">0,00 zł</div>
+  </div>
+</div>
+
+<!-- MODAL EDYCJI -->
+<div class="modal-overlay" id="edit-modal" style="display:none;">
+  <div class="modal-box">
+    <button class="modal-close" onclick="zamknijEdycje()">✕ Zamknij</button>
+    <div class="hero"><h2>✏️ EDYCJA WPISU</h2><p id="edit-info">Edytujesz wpis z historii</p></div>
+    <input type="hidden" id="edit-ts">
+    <label>Kierowca</label>
+    <select id="edit-kierowca"><option value="">– wybierz –</option></select>
+    <label>Ciągnik</label>
+    <select id="edit-ciagnik">
+      <option value="">– wybierz –</option>
+    </select>
+    <div id="edit-naczepa-wrap" style="display:none;">
+      <label>Przyczepa <button type="button" onclick="usunPrzyczepeEdit()" style="float:right;background:transparent;border:none;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;">✕ Usuń</button></label>
+      <select id="edit-naczepa">
+        <option value="">– wybierz przyczepę –</option>
+      </select>
+    </div>
+    <button type="button" id="edit-btn-dodaj-przyczepe" class="btn-add" style="margin-top:10px;" onclick="dodajPrzyczepeEdit()">+ Przyczepa</button>
+    <label>Data trasy</label><input type="date" id="edit-data">
+    <label>Nr dokumentu WZ</label><input type="text" id="edit-wz" placeholder="WZ/2025/0123">
+    <label>Naftobaza (miejsce załadunku)</label>
+    <select id="edit-naftobaza" onchange="naftobazaZmienEdit()">
+      <option value="">– wybierz –</option>
+      <option value="Rejowiec">Naftobaza Rejowiec</option>
+      <option value="Poznań">Naftobaza Poznań</option>
+      <option value="Nowa Wieś">Naftobaza Nowa Wieś</option>
+      <option value="Inna">Inna...</option>
+    </select>
+    <input type="text" id="edit-naftobaza-inna" placeholder="Wpisz nazwę naftobazy..." style="margin-top:8px;display:none;">
+    <div class="row2" style="margin-top:14px;">
+      <div><label style="margin-top:0">Km start</label><input type="number" id="edit-kms" inputmode="numeric"></div>
+      <div><label style="margin-top:0">Km koniec</label><input type="number" id="edit-kmk" inputmode="numeric"></div>
+    </div>
+    <div style="margin-top:14px;">
+      <div class="card-title" style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;color:#1e3a8a;text-transform:uppercase;border-bottom:2px solid #e2e8f0;padding-bottom:6px;margin-bottom:10px;">⛽ Tankowanie</div>
+      <div class="row2">
+        <div><label style="margin-top:0">Litry</label><input type="number" id="edit-tank-litry" inputmode="decimal"></div>
+        <div><label style="margin-top:0">Km przy tankowaniu</label><input type="number" id="edit-tank-km" inputmode="numeric"></div>
+      </div>
+    </div>
+    <div id="edit-produkty-box" style="margin-top:14px;"></div>
+    <div style="margin-top:14px;">
+      <label style="margin-top:0;color:#b91c1c;font-weight:800;">Powód korekty *</label>
+      <select id="edit-powod-korekty">
+        <option value="">– wybierz powód –</option>
+        <option value="Błąd kierowcy przy wpisie">Błąd kierowcy przy wpisie</option>
+        <option value="Korekta z dokumentu WZ">Korekta z dokumentu WZ</option>
+        <option value="Korekta po reklamacji">Korekta po reklamacji</option>
+        <option value="Pomyłka biura">Pomyłka biura</option>
+        <option value="Inna">Inna...</option>
+      </select>
+      <input type="text" id="edit-powod-korekty-inny" placeholder="Opisz powód..." style="margin-top:6px;display:none;">
+    </div>
+    <div style="background:#fef3c7;border-radius:8px;padding:10px;margin-top:14px;font-size:13px;color:#854d0e;line-height:1.5;">
+      ⚠️ <b>Audit trail:</b> oryginalny wpis NIE zostanie nadpisany. Powstaje nowy wpis korygujący. Oba zostają w historii dla potrzeb kontroli.
+    </div>
+    <button class="btn btn-green" onclick="zapiszEdycje()">💾 ZAPISZ KOREKTĘ</button>
+    <div style="height:20px;"></div>
+  </div>
+</div>
+
+<!-- MODAL POTWIERDZENIA UBYTKÓW -->
+<div class="modal-overlay" id="ubytek-modal" style="display:none;">
+  <div class="modal-box">
+    <div class="hero" style="background:linear-gradient(135deg,#92400e 0%,#b45309 100%);"><h2>⚠️ UBYTKI PONAD NORMĘ</h2><p>Dla każdego produktu podaj powód</p></div>
+    <div style="background:#fef3c7;border-radius:8px;padding:12px;margin-top:12px;font-size:13px;color:#78350f;line-height:1.5;">
+      <b>Wpis traktujemy jako oficjalny dowód księgowy.</b> Powody ubytków są zapisywane do arkusza i mogą być przedmiotem kontroli skarbowej. Pisz konkretnie (np. „rozlanie podczas zlewania u klienta X").
+    </div>
+    <div id="ubytek-lista" style="margin-top:12px;"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn-sm" style="flex:1;padding:14px;font-size:15px;background:#f1f5f9;color:#475569;" onclick="zamknijUbytekModal()">← Wróć i popraw</button>
+      <button class="btn btn-green" style="flex:1;margin-top:0;padding:14px;font-size:15px;" onclick="potwierdzUbytkiIWyslij()">✓ Potwierdzam i wysyłam</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN EKRAN -->
+<div class="pin-overlay" id="pin-overlay" style="display:none;">
+  <div style="font-size:48px;margin-bottom:12px;">🔑</div>
+  <h2 id="pin-title">WPISZ PIN</h2>
+  <p id="pin-subtitle">Podaj swój 4-cyfrowy PIN</p>
+  <div class="pin-dots">
+    <div class="pin-dot" id="pd-0"></div><div class="pin-dot" id="pd-1"></div>
+    <div class="pin-dot" id="pd-2"></div><div class="pin-dot" id="pd-3"></div>
+  </div>
+  <div class="pin-grid">
+    <button class="pin-key" onclick="pinKey('1')">1</button>
+    <button class="pin-key" onclick="pinKey('2')">2</button>
+    <button class="pin-key" onclick="pinKey('3')">3</button>
+    <button class="pin-key" onclick="pinKey('4')">4</button>
+    <button class="pin-key" onclick="pinKey('5')">5</button>
+    <button class="pin-key" onclick="pinKey('6')">6</button>
+    <button class="pin-key" onclick="pinKey('7')">7</button>
+    <button class="pin-key" onclick="pinKey('8')">8</button>
+    <button class="pin-key" onclick="pinKey('9')">9</button>
+    <button class="pin-key del" onclick="pinDel()">⌫</button>
+    <button class="pin-key" onclick="pinKey('0')">0</button>
+    <button class="pin-key del" onclick="pinAnuluj()">✕</button>
+  </div>
+  <div class="pin-err" id="pin-err"></div>
+</div>
+
+<script>
+// ===== KONFIGURACJA =====
+var HASLO = 'cysterna2026';
+var DOMYSLNI_KIEROWCY = {'Wojtek':'2525','Jakub':'2325','Szczepan':'2425'};
+
+function getKierowcy(){
+  try{
+    var s=lsGet('cysterna_kierowcy');
+    if(s) return JSON.parse(s);
+  }catch(e){}
+  return Object.assign({},DOMYSLNI_KIEROWCY);
+}
+function saveKierowcy(obj){ try{ lsSet('cysterna_kierowcy',JSON.stringify(obj)); }catch(e){} }
+function getPin(imie){ var k=getKierowcy(); return k[imie]||null; }
+function listaKierowcow(){ return Object.keys(getKierowcy()); }
+var SHEETS_URL = 'https://script.google.com/macros/s/AKfycby66lPVes7wEC6K2FWG-d1udV8A4VEkF2eyNEzNvE53zIaZ4T2k167LhkqQ1A7T4aFblQ/exec';
+
+// ===== FLOTA – domyślna na podstawie wcześniejszej konfiguracji =====
+var DOMYSLNE_CIAGNIKI = ['PO6S361','PKN99959','PKN78456','PKN67518','PKN43062'];
+var DOMYSLNE_NACZEPY  = ['PKN472XC','PKN294XH','PKN142XA'];
+
+function getCiagniki(){
+  try{
+    var s=lsGet('cysterna_ciagniki');
+    if(s) return JSON.parse(s);
+  }catch(e){}
+  return DOMYSLNE_CIAGNIKI.slice();
+}
+function saveCiagniki(arr){ try{ lsSet('cysterna_ciagniki',JSON.stringify(arr)); }catch(e){} }
+function getNaczepy(){
+  try{
+    var s=lsGet('cysterna_naczepy');
+    if(s) return JSON.parse(s);
+  }catch(e){}
+  return DOMYSLNE_NACZEPY.slice();
+}
+function saveNaczepy(arr){ try{ lsSet('cysterna_naczepy',JSON.stringify(arr)); }catch(e){} }
+
+// ===== STORAGE SAFE =====
+var _memStore = {};
+var _storageOK = (function(){
+  try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return true; }
+  catch(e){ return false; }
+})();
+function lsGet(k){ try{ return _storageOK?localStorage.getItem(k):_memStore[k]||null; }catch(e){ return _memStore[k]||null; } }
+function lsSet(k,v){ try{ _storageOK?localStorage.setItem(k,v):(_memStore[k]=v); }catch(e){ _memStore[k]=v; } }
+function lsRemove(k){ try{ _storageOK?localStorage.removeItem(k):delete _memStore[k]; }catch(e){ delete _memStore[k]; } }
+
+// ===== HISTORIA / KOLEJKA =====
+function getHistoria(){ try{ return JSON.parse(lsGet('cysterna_historia')||'[]'); }catch(e){ return []; } }
+function saveHistoria(a){ try{ lsSet('cysterna_historia',JSON.stringify(a)); }catch(e){} }
+function getOczekujace(){ try{ return JSON.parse(lsGet('cysterna_oczekujace')||'[]'); }catch(e){ return []; } }
+function saveOczekujace(a){ try{ lsSet('cysterna_oczekujace',JSON.stringify(a)); }catch(e){} }
+
+// ===== RENDER FLOTY =====
+function wypelnijSelectFloty(){
+  var c=getCiagniki(), n=getNaczepy();
+  ['ciagnik','edit-ciagnik'].forEach(function(id){
+    var sel=document.getElementById(id); if(!sel) return;
+    var current=sel.value;
+    sel.innerHTML='<option value="">– wybierz –</option>'+c.map(function(r){ return '<option value="'+r+'">'+r+'</option>'; }).join('');
+    sel.value=current;
+  });
+  ['naczepa','edit-naczepa'].forEach(function(id){
+    var sel=document.getElementById(id); if(!sel) return;
+    var current=sel.value;
+    sel.innerHTML='<option value="">– wybierz przyczepę –</option>'+n.map(function(r){ return '<option value="'+r+'">'+r+'</option>'; }).join('');
+    sel.value=current;
+  });
+}
+
+function renderFlote(){
+  var cBox=document.getElementById('ciagniki-list');
+  var nBox=document.getElementById('naczepy-list');
+  if(!cBox||!nBox) return;
+  var c=getCiagniki(), n=getNaczepy();
+  var rowStyle='display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;';
+  var regStyle='font-family:\'Barlow Condensed\',sans-serif;font-size:16px;font-weight:800;color:#1e3a8a;letter-spacing:1px;';
+  cBox.innerHTML=c.length?c.map(function(r){
+    return '<div style="'+rowStyle+'"><span style="'+regStyle+'">'+r+'</span><button class="del-btn" onclick="usunCiagnik(\''+r+'\')">✕ Usuń</button></div>';
+  }).join(''):'<p style="color:#94a3b8;font-size:13px;text-align:center;padding:8px;">Brak ciągników – dodaj poniżej</p>';
+  nBox.innerHTML=n.length?n.map(function(r){
+    return '<div style="'+rowStyle+'"><span style="'+regStyle+'color:#92400e;">'+r+'</span><button class="del-btn" onclick="usunNaczepe(\''+r+'\')">✕ Usuń</button></div>';
+  }).join(''):'<p style="color:#94a3b8;font-size:13px;text-align:center;padding:8px;">Brak naczep – dodaj poniżej</p>';
+}
+
+function dodajCiagnik(){
+  var inp=document.getElementById('nowy-ciagnik');
+  var v=(inp.value||'').trim().toUpperCase().replace(/\s+/g,'');
+  if(!v){ alert('Wpisz numer rejestracyjny'); return; }
+  var arr=getCiagniki();
+  if(arr.indexOf(v)!==-1){ alert('Ten ciągnik już istnieje'); return; }
+  arr.push(v); saveCiagniki(arr);
+  inp.value=''; renderFlote(); wypelnijSelectFloty();
+}
+function usunCiagnik(r){
+  if(!confirm('Usunąć ciągnik '+r+' z listy?')) return;
+  var arr=getCiagniki().filter(function(x){ return x!==r; });
+  saveCiagniki(arr); renderFlote(); wypelnijSelectFloty();
+}
+function dodajNaczepe(){
+  var inp=document.getElementById('nowa-naczepa');
+  var v=(inp.value||'').trim().toUpperCase().replace(/\s+/g,'');
+  if(!v){ alert('Wpisz numer rejestracyjny'); return; }
+  var arr=getNaczepy();
+  if(arr.indexOf(v)!==-1){ alert('Ta naczepa już istnieje'); return; }
+  arr.push(v); saveNaczepy(arr);
+  inp.value=''; renderFlote(); wypelnijSelectFloty();
+}
+function usunNaczepe(r){
+  if(!confirm('Usunąć naczepę '+r+' z listy?')) return;
+  var arr=getNaczepy().filter(function(x){ return x!==r; });
+  saveNaczepy(arr); renderFlote(); wypelnijSelectFloty();
+}
+
+// ===== KIEROWCY – wypełnianie selectów i panel zarządzania =====
+function wypelnijSelectyKierowcow(){
+  var imiona=listaKierowcow();
+  ['kierowca','edit-kierowca','kalk-kierowca'].forEach(function(id){
+    var sel=document.getElementById(id); if(!sel) return;
+    var current=sel.value;
+    sel.innerHTML='<option value="">– wybierz –</option>'+imiona.map(function(k){ return '<option>'+k+'</option>'; }).join('');
+    sel.value=current;
+  });
+}
+
+function renderKierowcow(){
+  var box=document.getElementById('kierowcy-list'); if(!box) return;
+  var k=getKierowcy();
+  var imiona=Object.keys(k);
+  var rowStyle='display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;';
+  if(!imiona.length){
+    box.innerHTML='<p style="color:#94a3b8;font-size:13px;text-align:center;padding:8px;">Brak kierowców – dodaj poniżej</p>';
+    return;
+  }
+  box.innerHTML=imiona.map(function(imie){
+    var pinMask='••••';
+    return '<div style="'+rowStyle+'">'+
+      '<div><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:17px;font-weight:800;color:#1e3a8a;letter-spacing:1px;">👷 '+imie+'</span>'+
+      '<div style="font-size:11px;color:#64748b;margin-top:2px;">PIN: <span id="pin-show-'+imie+'">'+pinMask+'</span> '+
+      '<button class="btn-sm" style="padding:2px 8px;font-size:11px;margin-left:4px;" onclick="pokazPin(\''+imie+'\')">👁 pokaż</button> '+
+      '<button class="btn-sm" style="padding:2px 8px;font-size:11px;background:#fef3c7;color:#92400e;" onclick="zmienPin(\''+imie+'\')">✏️ zmień</button>'+
+      '</div></div>'+
+      '<button class="del-btn" onclick="usunKierowce(\''+imie+'\')">✕ Usuń</button>'+
+      '</div>';
+  }).join('');
+}
+
+function pokazPin(imie){
+  var span=document.getElementById('pin-show-'+imie);
+  var k=getKierowcy(); if(!span||!k[imie]) return;
+  if(span.textContent==='••••'){
+    span.textContent=k[imie];
+    setTimeout(function(){ if(span) span.textContent='••••'; },5000);
+  } else { span.textContent='••••'; }
+}
+
+function zmienPin(imie){
+  var nowy=prompt('Nowy 4-cyfrowy PIN dla '+imie+':');
+  if(nowy===null) return;
+  nowy=String(nowy).trim();
+  if(!/^\d{4}$/.test(nowy)){ alert('PIN musi być dokładnie 4 cyframi (0-9).'); return; }
+  var k=getKierowcy(); k[imie]=nowy; saveKierowcy(k);
+  renderKierowcow();
+  alert('✅ PIN dla '+imie+' zmieniony.');
+}
+
+function dodajKierowce(){
+  var imieEl=document.getElementById('nowy-kierowca');
+  var pinEl=document.getElementById('nowy-kierowca-pin');
+  var imie=(imieEl.value||'').trim();
+  var pin=(pinEl.value||'').trim();
+  if(!imie){ alert('Wpisz imię kierowcy'); return; }
+  if(!/^\d{4}$/.test(pin)){ alert('PIN musi być dokładnie 4 cyframi (0-9).'); return; }
+  // Pierwsza litera duża, reszta zachowana
+  imie=imie.charAt(0).toUpperCase()+imie.slice(1);
+  var k=getKierowcy();
+  if(k[imie]){ alert('Kierowca o tym imieniu już istnieje. Aby zmienić PIN użyj „✏️ zmień".'); return; }
+  k[imie]=pin; saveKierowcy(k);
+  imieEl.value=''; pinEl.value='';
+  renderKierowcow();
+  wypelnijSelectyKierowcow();
+  renderHistoriaKierowcy();
+}
+
+function usunKierowce(imie){
+  var hist=getHistoria();
+  var ileWpisow=hist.filter(function(h){ return h.kierowca===imie; }).length;
+  var komunikat='Usunąć kierowcę '+imie+'?';
+  if(ileWpisow>0) komunikat+='\n\n⚠️ Uwaga: w historii jest '+ileWpisow+' wpisów tego kierowcy. Wpisy nie zostaną usunięte, ale po usunięciu kierowcy nie będzie można ich filtrować.';
+  if(!confirm(komunikat)) return;
+  var k=getKierowcy(); delete k[imie]; saveKierowcy(k);
+  if(aktywnyKierowca===imie) aktywnyKierowca=null;
+  renderKierowcow();
+  wypelnijSelectyKierowcow();
+  renderHistoriaKierowcy();
+}
+
+// ===== POKAZYWANIE / UKRYWANIE PRZYCZEPY W FORMULARZU =====
+function dodajPrzyczepe(){
+  document.getElementById('naczepa-wrap').style.display='block';
+  document.getElementById('btn-dodaj-przyczepe').style.display='none';
+  document.getElementById('naczepa').focus();
+}
+function usunPrzyczepe(){
+  document.getElementById('naczepa').value='';
+  document.getElementById('naczepa-wrap').style.display='none';
+  document.getElementById('btn-dodaj-przyczepe').style.display='block';
+  zapiszRoboczy();
+}
+function dodajPrzyczepeEdit(){
+  document.getElementById('edit-naczepa-wrap').style.display='block';
+  document.getElementById('edit-btn-dodaj-przyczepe').style.display='none';
+  document.getElementById('edit-naczepa').focus();
+}
+function usunPrzyczepeEdit(){
+  document.getElementById('edit-naczepa').value='';
+  document.getElementById('edit-naczepa-wrap').style.display='none';
+  document.getElementById('edit-btn-dodaj-przyczepe').style.display='block';
+}
+
+// ===== NAFTOBAZA =====
+function naftobazaZmien(){
+  var v=document.getElementById('naftobaza').value;
+  var inp=document.getElementById('naftobaza-inna');
+  inp.style.display=v==='Inna'?'block':'none';
+  if(v!=='Inna') inp.value='';
+}
+function naftobazaZmienEdit(){
+  var v=document.getElementById('edit-naftobaza').value;
+  var inp=document.getElementById('edit-naftobaza-inna');
+  inp.style.display=v==='Inna'?'block':'none';
+  if(v!=='Inna') inp.value='';
+}
+function pobierzNaftobaze(){
+  var v=document.getElementById('naftobaza').value;
+  if(v==='Inna') return (document.getElementById('naftobaza-inna').value||'').trim();
+  return v;
+}
+function pobierzNaftobazeEdit(){
+  var v=document.getElementById('edit-naftobaza').value;
+  if(v==='Inna') return (document.getElementById('edit-naftobaza-inna').value||'').trim();
+  return v;
+}
+
+// ===== AUTOSAVE ROBOCZY =====
+function zapiszRoboczy(){
+  try{
+    var d={
+      kierowca:document.getElementById('kierowca').value,
+      ciagnik:document.getElementById('ciagnik').value,
+      naczepa:document.getElementById('naczepa').value,
+      data:document.getElementById('data').value,
+      wz:document.getElementById('wz').value,
+      naftobaza:document.getElementById('naftobaza').value,
+      naftobazaInna:document.getElementById('naftobaza-inna').value,
+      kms:document.getElementById('kms').value,
+      kmk:document.getElementById('kmk').value,
+      tankLitry:document.getElementById('tank-litry').value,
+      tankKm:document.getElementById('tank-km').value
+    };
+    if(d.kierowca||d.ciagnik||d.wz||d.kms){
+      lsSet('cysterna_roboczy',JSON.stringify(d));
+      document.getElementById('draft-bar').classList.add('show');
+    }
+  }catch(e){}
+}
+function wczytajRoboczy(){
+  try{
+    var d=JSON.parse(lsGet('cysterna_roboczy')||'{}');
+    if(!d.kierowca) return;
+    document.getElementById('kierowca').value=d.kierowca||'';
+    document.getElementById('ciagnik').value=d.ciagnik||'';
+    document.getElementById('naczepa').value=d.naczepa||'';
+    if(d.naczepa){
+      document.getElementById('naczepa-wrap').style.display='block';
+      document.getElementById('btn-dodaj-przyczepe').style.display='none';
+    } else {
+      document.getElementById('naczepa-wrap').style.display='none';
+      document.getElementById('btn-dodaj-przyczepe').style.display='block';
+    }
+    document.getElementById('data').value=d.data||'';
+    document.getElementById('wz').value=d.wz||'';
+    document.getElementById('naftobaza').value=d.naftobaza||'';
+    document.getElementById('naftobaza-inna').value=d.naftobazaInna||'';
+    naftobazaZmien();
+    document.getElementById('kms').value=d.kms||'';
+    document.getElementById('kmk').value=d.kmk||'';
+    document.getElementById('tank-litry').value=d.tankLitry||'';
+    document.getElementById('tank-km').value=d.tankKm||'';
+    obliczSpalanie();
+    document.getElementById('draft-bar').classList.remove('show');
+    alert('✅ Wczytano zapisany wpis!');
+  }catch(e){}
+}
+function sprawdzRoboczy(){
+  try{
+    var d=JSON.parse(lsGet('cysterna_roboczy')||'{}');
+    if(d.kierowca) document.getElementById('draft-bar').classList.add('show');
+  }catch(e){}
+}
+
+// ===== OFFLINE =====
+var isOnline = navigator.onLine;
+function updateOnlineStatus(){
+  try{
+    isOnline=navigator.onLine;
+    var bar=document.getElementById('offline-bar');
+    if(bar) bar.classList.toggle('show',!isOnline);
+    if(isOnline) wyslijOczekujace();
+  }catch(e){}
+}
+window.addEventListener('online',updateOnlineStatus);
+window.addEventListener('offline',updateOnlineStatus);
+updateOnlineStatus();
+
+// ===== WYSYŁANIE =====
+// FIX #3: tryb 'no-cors' zwraca opaque response, więc .then() jest niewiarygodne.
+// Używamy AbortController + timeout. Sukces = fetch nie został odrzucony i nie przekroczył timeoutu.
+// To wciąż nie jest 100% gwarancja (Google może zwrócić 500 a my dostaniemy "ok"),
+// ale jest znacznie lepsze niż ślepa wiara w .then(). Realne potwierdzenie wymaga
+// przepisania Apps Script na CORS-aware lub użycia JSONP.
+function safeFetch(payload){
+  var ctrl = new AbortController();
+  var timeoutId = setTimeout(function(){ ctrl.abort(); }, 15000);
+  return fetch(SHEETS_URL,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload),
+    signal: ctrl.signal
+  }).then(function(r){
+    clearTimeout(timeoutId);
+    return r;
+  }, function(err){
+    clearTimeout(timeoutId);
+    throw err;
+  });
+}
+
+function wyslijOczekujace(){
+  var oczekujace=getOczekujace();
+  if(!oczekujace.length) return;
+  var pozostale=[];
+  var doneCount=0;
+  oczekujace.forEach(function(p){
+    safeFetch(p).then(function(){
+      var hist=getHistoria();
+      hist.forEach(function(h){ if(h.ts===p.ts) h.wyslane=true; });
+      saveHistoria(hist);
+    }).catch(function(){ pozostale.push(p); }).then(function(){
+      doneCount++;
+      if(doneCount===oczekujace.length) saveOczekujace(pozostale);
+    });
+  });
+}
+
+// ===== TABS =====
+var adminOdblokowany=false;
+var aktywnyKierowca=null;
+
+function goTab(t){
+  if(t==='admin'&&!adminOdblokowany){ document.getElementById('lock-screen').style.display='flex'; return; }
+  ['form','hist','mail','admin'].forEach(function(n){
+    document.getElementById('tab-'+n).classList.remove('active');
+    document.getElementById('tb-'+n).classList.remove('active');
+  });
+  document.getElementById('tab-'+t).classList.add('active');
+  document.getElementById('tb-'+t).classList.add('active');
+  if(t==='hist'){
+    renderHistoriaKierowcy();
+  }
+}
+function sprawdzHaslo(){
+  if(document.getElementById('haslo-input').value===HASLO){
+    adminOdblokowany=true;
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('haslo-input').value='';
+    goTab('admin');
+  } else {
+    document.getElementById('lock-err').textContent='❌ Błędne hasło!';
+    document.getElementById('haslo-input').value='';
+  }
+}
+function anulujBiuro(){ document.getElementById('lock-screen').style.display='none'; goTab('form'); }
+
+// ===== PIN =====
+var _pinTarget=null, _pinBuf='';
+function wybierzKierowce(kto){
+  if(kto==='wszyscy'){ aktywnyKierowca='wszyscy'; podswietlKierowce('wszyscy'); renderHistoria(); return; }
+  _pinTarget=kto; _pinBuf=''; updatePinDots();
+  document.getElementById('pin-title').textContent='👷 '+kto.toUpperCase();
+  document.getElementById('pin-subtitle').textContent='Wpisz swój PIN aby zobaczyć trasy';
+  document.getElementById('pin-err').textContent='';
+  document.getElementById('pin-overlay').style.display='flex';
+}
+function pinKey(d){ if(_pinBuf.length>=4) return; _pinBuf+=d; updatePinDots(); if(_pinBuf.length===4) sprawdzPin(); }
+function pinDel(){ _pinBuf=_pinBuf.slice(0,-1); updatePinDots(); document.getElementById('pin-err').textContent=''; }
+function pinAnuluj(){ _pinBuf=''; _pinTarget=null; document.getElementById('pin-overlay').style.display='none'; }
+function updatePinDots(){ for(var i=0;i<4;i++){ var d=document.getElementById('pd-'+i); if(d) d.classList.toggle('filled',i<_pinBuf.length); } }
+function sprawdzPin(){
+  if(_pinBuf===getPin(_pinTarget)){
+    document.getElementById('pin-overlay').style.display='none';
+    aktywnyKierowca=_pinTarget; podswietlKierowce(_pinTarget); renderHistoria();
+  } else {
+    document.getElementById('pin-err').textContent='❌ Błędny PIN! Spróbuj ponownie.';
+    _pinBuf=''; updatePinDots();
+  }
+}
+function podswietlKierowce(kto){
+  var grid=document.getElementById('hist-kierowcy-grid');
+  if(!grid) return;
+  Array.prototype.forEach.call(grid.querySelectorAll('.kierowca-btn'),function(b){
+    b.classList.toggle('active', b.getAttribute('data-kto')===kto);
+  });
+}
+function renderHistoriaKierowcy(){
+  var grid=document.getElementById('hist-kierowcy-grid'); if(!grid) return;
+  var imiona=listaKierowcow();
+  grid.innerHTML='';
+  imiona.forEach(function(k){
+    var b=document.createElement('button');
+    b.className='kierowca-btn'+(aktywnyKierowca===k?' active':'');
+    b.setAttribute('data-kto',k);
+    b.textContent='👷 '+k;
+    b.onclick=function(){ wybierzKierowce(k); };
+    grid.appendChild(b);
+  });
+  if(adminOdblokowany){
+    var wb=document.createElement('button');
+    wb.className='kierowca-btn'+(aktywnyKierowca==='wszyscy'?' active':'');
+    wb.setAttribute('data-kto','wszyscy');
+    wb.textContent='👥 Wszyscy';
+    wb.onclick=function(){ wybierzKierowce('wszyscy'); };
+    grid.appendChild(wb);
+  }
+}
+
+// ===== HISTORIA =====
+// Buduje łańcuchy korekt: zwraca tablicę grup, każda to {najnowsza, wszystkie:[oryginal, korekty...]}
+function grupujWersje(wpisy){
+  // mapa: pierwowzór_ts -> [wpisy w łańcuchu]
+  var mapa={};
+  wpisy.forEach(function(h){
+    var koren = h.koryguje_ts || h.ts; // korekty wskazują pierwowzór, oryginały wskazują siebie
+    if(!mapa[koren]) mapa[koren]=[];
+    mapa[koren].push(h);
+  });
+  var grupy=[];
+  Object.keys(mapa).forEach(function(k){
+    var lista=mapa[k].slice().sort(function(a,b){ return (a.wersja||1)-(b.wersja||1); });
+    var najnowsza=lista[lista.length-1];
+    grupy.push({ najnowsza:najnowsza, wszystkie:lista, koren:k });
+  });
+  return grupy;
+}
+
+function renderHistoria(){
+  var cont=document.getElementById('historia-list');
+  if(!aktywnyKierowca){ cont.innerHTML='<p style="color:#94a3b8;text-align:center;padding:30px 0;">👆 Wybierz kierowcę powyżej</p>'; document.getElementById('hist-stats').style.display='none'; return; }
+  var hist=getHistoria();
+  var filtered=aktywnyKierowca==='wszyscy'?hist:hist.filter(function(h){ return h.kierowca===aktywnyKierowca; });
+  // Grupuj wersje
+  var grupy=grupujWersje(filtered);
+  // Statystyki: liczymy tylko najnowsze wersje
+  var najnowsze=grupy.map(function(g){ return g.najnowsza; });
+  var statsBox=document.getElementById('hist-stats');
+  if(najnowsze.length>0){
+    statsBox.style.display='block';
+    document.getElementById('hist-stats-title').textContent=(aktywnyKierowca==='wszyscy'?'Wszyscy kierowcy':'👷 '+aktywnyKierowca)+' – podsumowanie';
+    var totalKm=najnowsze.reduce(function(a,h){ return a+(h.km||0); },0);
+    var spalania=najnowsze.filter(function(h){ return h.tankowanie&&h.tankowanie.spalanieL100km; }).map(function(h){ return h.tankowanie.spalanieL100km; });
+    var srSpal=spalania.length?(spalania.reduce(function(a,b){ return a+b; },0)/spalania.length).toFixed(1):null;
+    document.getElementById('stat-trasy').textContent=najnowsze.length;
+    document.getElementById('stat-km').textContent=totalKm;
+    document.getElementById('stat-spal').textContent=srSpal?srSpal+' l':'–';
+  } else { statsBox.style.display='none'; }
+  if(!najnowsze.length){ cont.innerHTML='<p style="color:#94a3b8;text-align:center;padding:30px 0;">Brak wpisów dla '+aktywnyKierowca+'</p>'; return; }
+  // Sortuj po dacie najnowszej wersji (od najnowszej)
+  grupy.sort(function(a,b){ return (b.najnowsza.ts||0)-(a.najnowsza.ts||0); });
+  cont.innerHTML='';
+  grupy.forEach(function(g){
+    var h=g.najnowsza;
+    var allHist=getHistoria();
+    var realIdx=allHist.findIndex(function(x){ return x.ts===h.ts; });
+    var div=document.createElement('div');
+    div.className='hist-item';
+    var statusBadge=h.wyslane?'<span class="hist-badge hist-sent">✓ Wysłano</span>':'<span class="hist-badge hist-offline">⏳ Oczekuje</span>';
+    var wersjaBadge='';
+    if((h.wersja||1)>1){
+      wersjaBadge='<span class="hist-badge" style="background:#fef3c7;color:#92400e;">🔄 Skorygowano (v'+h.wersja+')</span>';
+    }
+    var prods=(h.produkty||[]).map(function(p){
+      var statusKolor='#475569';
+      if(p.status==='PONAD NORMĘ'||p.status==='DUŻY UBYTEK'||p.status==='DO WYJAŚNIENIA') statusKolor='#b91c1c';
+      else if(p.status==='OK – W NORMIE'||p.status==='OK – BEZ UBYTKÓW'||p.status==='OSZCZĘDNOŚĆ') statusKolor='#15803d';
+      var line='<div style="font-size:12px;color:'+statusKolor+';margin-top:4px;">'+p.paliwo+(p.grawitacja?' GRAW':'')+': zał.'+p.zaladunek_RZ+'L | roz.'+p.rozlane_RZ+'L | <b>'+p.status+'</b></div>';
+      if(p.powodUbytku) line+='<div style="font-size:11px;color:#7c2d12;margin-left:10px;font-style:italic;">↳ powód: '+p.powodUbytku+'</div>';
+      return line;
+    }).join('');
+    // Powód korekty (jeśli to korekta)
+    var korektaInfo='';
+    if(h.powod_korekty){
+      korektaInfo='<div style="background:#fef3c7;border-radius:6px;padding:8px;margin-top:8px;font-size:12px;color:#854d0e;"><b>Powód korekty:</b> '+h.powod_korekty+(h.autor_korekty?' (przez: '+h.autor_korekty+')':'')+'</div>';
+    }
+    // Przycisk historii zmian (tylko jeśli >1 wersja)
+    var historiaBtn='';
+    if(g.wszystkie.length>1){
+      historiaBtn='<button class="btn-sm" style="background:#fef3c7;color:#92400e;margin-top:6px;width:100%;" onclick="pokazHistorieZmian('+g.najnowsza.ts+')">📜 Pokaż historię zmian ('+g.wszystkie.length+' wersji)</button>';
+    }
+    var editBtn=adminOdblokowany
+      ?'<button class="btn-sm" style="background:#eff6ff;color:#1d4ed8;margin-top:6px;width:100%;" onclick="otworzEdycje('+realIdx+')">✏️ Wprowadź korektę</button>'
+      :'<button class="btn-sm" style="margin-top:6px;width:100%;" onclick="prosbaOEdycje('+realIdx+')">✏️ Zgłoś do poprawy</button>';
+    var pojazdLabel = h.ciagnik ? (h.ciagnik+(h.naczepa?' + '+h.naczepa:'')) : (h.pojazd||'–');
+    div.innerHTML='<h4>'+(h.kierowca||'–')+' – '+pojazdLabel+' '+statusBadge+wersjaBadge+'</h4>'+
+      '<div class="hist-meta">📅 '+(h.data||'–')+' &nbsp;|&nbsp; 🛣️ '+(h.km||0)+' km &nbsp;|&nbsp; 📄 '+(h.wz||'–')+(h.naftobaza?' &nbsp;|&nbsp; 🛢️ '+h.naftobaza:'')+'</div>'+
+      (h.tankowanie&&h.tankowanie.spalanieL100km?'<div style="font-size:12px;color:#1d4ed8;margin-bottom:4px;">⛽ Spalanie: <b>'+h.tankowanie.spalanieL100km+' l/100km</b></div>':'')+
+      prods+korektaInfo+historiaBtn+editBtn;
+    cont.appendChild(div);
+  });
+}
+
+function pokazHistorieZmian(tsNajnowszej){
+  var hist=getHistoria();
+  var najnow=hist.find(function(x){ return x.ts===tsNajnowszej; });
+  if(!najnow) return;
+  var koren=najnow.koryguje_ts||najnow.ts;
+  var wszystkie=hist.filter(function(h){
+    return (h.koryguje_ts||h.ts)===koren;
+  }).sort(function(a,b){ return (a.wersja||1)-(b.wersja||1); });
+  var html='<b style="font-size:14px;">📜 Historia zmian wpisu</b>\n\n';
+  wszystkie.forEach(function(h,i){
+    var marker = i===0 ? '🟢 ORYGINAŁ' : '🔄 KOREKTA';
+    var data=h.czas_utworzenia ? new Date(h.czas_utworzenia).toLocaleString('pl-PL') : (h.data||'–');
+    html+='─── Wersja '+(h.wersja||1)+' '+marker+' ───\n';
+    html+='Czas: '+data+'\n';
+    if(h.autor_korekty) html+='Autor: '+h.autor_korekty+'\n';
+    if(h.powod_korekty) html+='Powód: '+h.powod_korekty+'\n';
+    html+='Km: '+(h.km||0)+' | WZ: '+(h.wz||'–')+'\n';
+    (h.produkty||[]).forEach(function(p){
+      html+='  • '+p.paliwo+': zał.'+p.zaladunek_RZ+'/roz.'+p.rozlane_RZ+' → '+p.status+'\n';
+    });
+    html+='\n';
+  });
+  alert(html);
+}
+function wyczyscHistorie(){
+  if(!adminOdblokowany){ alert('Tylko administrator (panel Biuro) może czyścić historię.'); return; }
+  var hist=getHistoria();
+  if(!hist.length){ alert('Historia jest już pusta.'); return; }
+  var t1=confirm('⚠️ UWAGA: za chwilę wyczyścisz lokalną historię '+hist.length+' wpisów.\n\nWpisy NIE znikną z Google Sheets, ale jeśli któryś nie został jeszcze wysłany, zostanie utracony.\n\nKontynuować?');
+  if(!t1) return;
+  var kod=prompt('Wpisz dokładnie WYCZYSC aby potwierdzić:');
+  if(kod!=='WYCZYSC'){ alert('Anulowano (zły kod).'); return; }
+  // Logujemy fakt czyszczenia – zostaje w localStorage, można potem zobaczyć kiedy ktoś co kasował
+  try{
+    var log=JSON.parse(lsGet('cysterna_audit_log')||'[]');
+    log.push({akcja:'WYCZYSCZONO_HISTORIE',czas:new Date().toISOString(),wpisow:hist.length,autor:adminOdblokowany?'biuro':'?'});
+    lsSet('cysterna_audit_log',JSON.stringify(log));
+  }catch(e){}
+  lsRemove('cysterna_historia');
+  renderHistoria();
+}
+
+// ===== EDYCJA =====
+function otworzEdycje(idx){
+  var hist=getHistoria(); var h=hist[idx]; if(!h) return;
+  document.getElementById('edit-ts').value=h.ts||'';
+  document.getElementById('edit-info').textContent='Wpis: '+(h.kierowca||'')+' – '+(h.data||'')+' (nr '+idx+')';
+  document.getElementById('edit-kierowca').value=h.kierowca||'';
+  // Migracja: stare wpisy mają tylko 'pojazd', nowe mają 'ciagnik'+'naczepa'
+  document.getElementById('edit-ciagnik').value=h.ciagnik||h.pojazd||'';
+  document.getElementById('edit-naczepa').value=h.naczepa||'';
+  if(h.naczepa){
+    document.getElementById('edit-naczepa-wrap').style.display='block';
+    document.getElementById('edit-btn-dodaj-przyczepe').style.display='none';
+  } else {
+    document.getElementById('edit-naczepa-wrap').style.display='none';
+    document.getElementById('edit-btn-dodaj-przyczepe').style.display='block';
+  }
+  document.getElementById('edit-data').value=h.data||'';
+  document.getElementById('edit-wz').value=h.wz||'';
+  // Naftobaza – jeśli wpis ma wartość spoza listy, ustaw jako "Inna"
+  var nbHist=h.naftobaza||'';
+  var nbSel=document.getElementById('edit-naftobaza');
+  var nbInna=document.getElementById('edit-naftobaza-inna');
+  var standardowe=['Rejowiec','Poznań','Nowa Wieś'];
+  if(!nbHist){ nbSel.value=''; nbInna.value=''; nbInna.style.display='none'; }
+  else if(standardowe.indexOf(nbHist)!==-1){ nbSel.value=nbHist; nbInna.value=''; nbInna.style.display='none'; }
+  else { nbSel.value='Inna'; nbInna.value=nbHist; nbInna.style.display='block'; }
+  document.getElementById('edit-kms').value=h.kmStart||'';
+  document.getElementById('edit-kmk').value=h.kmKoniec||'';
+  document.getElementById('edit-tank-litry').value=(h.tankowanie&&h.tankowanie.litry)||'';
+  document.getElementById('edit-tank-km').value=(h.tankowanie&&h.tankowanie.kmPrzyTankowaniu)||'';
+  var pb=document.getElementById('edit-produkty-box'); pb.innerHTML='';
+  (h.produkty||[]).forEach(function(p,pi){
+    var sec=document.createElement('div'); sec.className='card'; sec.style.borderLeft='4px solid #2563eb'; sec.style.marginTop='12px';
+    sec.innerHTML='<div class="card-title">PRODUKT '+(pi+1)+'</div>'+
+      '<div class="row2"><div><label style="margin-top:0">Paliwo</label><select id="ep-pal-'+pi+'"><option value="ON"'+(p.paliwo==='ON'?' selected':'')+'>ON</option><option value="PB"'+(p.paliwo==='PB'?' selected':'')+'>PB95</option><option value="OP"'+(p.paliwo==='OP'?' selected':'')+'>Olej opałowy</option></select></div>'+
+      '<div><label style="margin-top:0">Program</label><input type="number" id="ep-prog-'+pi+'" value="'+(p.program||'')+'"></div></div>'+
+      '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Zał. RZ</label><input type="number" id="ep-zrz-'+pi+'" value="'+(p.zaladunek_RZ||0)+'"></div><div><label style="margin-top:0">Zał. 15°C</label><input type="number" id="ep-z15-'+pi+'" value="'+(p.zaladunek_15||0)+'"></div></div>'+
+      '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Roz. RZ</label><input type="number" id="ep-rrz-'+pi+'" value="'+(p.rozlane_RZ||0)+'"></div><div><label style="margin-top:0">Roz. 15°C</label><input type="number" id="ep-r15-'+pi+'" value="'+(p.rozlane_15||0)+'"></div></div>';
+    pb.appendChild(sec);
+  });
+  document.getElementById('edit-modal').style.display='flex';
+  document.body.style.overflow='hidden';
+  // Audit – reset pola powodu korekty przy otwarciu
+  var pkSel=document.getElementById('edit-powod-korekty');
+  var pkInp=document.getElementById('edit-powod-korekty-inny');
+  if(pkSel) pkSel.value='';
+  if(pkInp){ pkInp.value=''; pkInp.style.display='none'; }
+  if(pkSel) pkSel.onchange=function(){
+    pkInp.style.display=pkSel.value==='Inna'?'block':'none';
+    if(pkSel.value!=='Inna') pkInp.value='';
+  };
+}
+function zamknijEdycje(){ document.getElementById('edit-modal').style.display='none'; document.body.style.overflow=''; }
+function prosbaOEdycje(idx){ alert('Zgłoszono prośbę o poprawę. Skontaktuj się z biurem.'); }
+
+// FIX #2: zapiszEdycje() była przerwana w połowie ('document.getElementByI...').
+// Pełna implementacja:
+function zapiszEdycje(){
+  var hist=getHistoria();
+  var ts=document.getElementById('edit-ts').value;
+  var idx=hist.findIndex(function(h){ return String(h.ts)===String(ts); });
+  if(idx===-1){ alert('Nie znaleziono wpisu!'); return; }
+  // Wymagaj powodu korekty (audit trail)
+  var pkSel=document.getElementById('edit-powod-korekty');
+  var pkInp=document.getElementById('edit-powod-korekty-inny');
+  var powodKorekty=(pkSel?pkSel.value:'')||'';
+  if(!powodKorekty){ alert('⚠️ Audit trail: musisz podać powód korekty.'); return; }
+  if(powodKorekty==='Inna'){
+    var op=(pkInp.value||'').trim();
+    if(!op){ alert('⚠️ Audit trail: opisz powód korekty (pole "Inna...").'); return; }
+    powodKorekty='Inna: '+op;
+  }
+  var oryg=hist[idx];
+  var oryginalTs = oryg.koryguje_ts || oryg.ts; // gdy korekta korekty, wskazujemy na pierwowzór
+  var poprzedniaWersja = oryg.wersja || 1;
+
+  var kms=parseFloat(document.getElementById('edit-kms').value)||0;
+  var kmk=parseFloat(document.getElementById('edit-kmk').value)||0;
+  var tankL=parseFloat(document.getElementById('edit-tank-litry').value)||0;
+  var tankKm=parseFloat(document.getElementById('edit-tank-km').value)||0;
+  var produkty=(oryg.produkty||[]).map(function(p,pi){
+    var palEl=document.getElementById('ep-pal-'+pi);
+    var progEl=document.getElementById('ep-prog-'+pi);
+    var zrzEl=document.getElementById('ep-zrz-'+pi);
+    var z15El=document.getElementById('ep-z15-'+pi);
+    var rrzEl=document.getElementById('ep-rrz-'+pi);
+    var r15El=document.getElementById('ep-r15-'+pi);
+    var pal=palEl?palEl.value:p.paliwo;
+    var prog=parseInt(progEl?progEl.value:p.program);
+    var zRZ=parseFloat(zrzEl?zrzEl.value:p.zaladunek_RZ)||0;
+    var z15=parseFloat(z15El?z15El.value:p.zaladunek_15)||0;
+    var rRZ=parseFloat(rrzEl?rrzEl.value:p.rozlane_RZ)||0;
+    var r15=parseFloat(r15El?r15El.value:p.rozlane_15)||0;
+    var pd=getProgData(pal,prog);
+    var wsp=pd?pd.wsp/100:0;
+    var typ=pd?pd.typ:p.typProg;
+    var grawitacja=pd&&pd.grawitacja?true:(p.grawitacja||false);
+    var zalU=typ==='15'?z15:zRZ;
+    var rozU=typ==='15'?r15:rRZ;
+    var norma=+(zalU*wsp).toFixed(2);
+    var rozn=+(zalU-rozU).toFixed(2);
+    var rozNetto=+(rozn-norma).toFixed(2);
+    // Status z uwzględnieniem grawitacji
+    var status;
+    if(grawitacja){
+      status = rozNetto<=0 ? 'OK – BEZ UBYTKÓW' : 'DO WYJAŚNIENIA';
+    } else {
+      status = rozNetto<0?'OSZCZĘDNOŚĆ':rozNetto<=10?'OK – W NORMIE':rozNetto<=50?'PONAD NORMĘ':'DUŻY UBYTEK';
+    }
+    return {
+      nrProduktu:pi+1, paliwo:pal, program:prog, typProg:typ, grawitacja:grawitacja,
+      zaladunek_RZ:zRZ, zaladunek_15:z15, rozlane_RZ:rRZ, rozlane_15:r15,
+      normaUbytek:norma, roznica:rozn, roznicaNetto:rozNetto, status:status,
+      powodUbytku:p.powodUbytku||''
+    };
+  });
+  var spalanie=tankL>0&&tankKm>0?+(tankL/tankKm*100).toFixed(2):null;
+  var editCiagnik=document.getElementById('edit-ciagnik').value;
+  var editNaczepa=document.getElementById('edit-naczepa').value;
+  var nowyTs=Date.now();
+  // AUDIT TRAIL: nowy wpis korygujący, oryginał NIE jest modyfikowany w treści,
+  // tylko oznaczamy go flagą "skorygowany_przez"
+  var korekta={
+    kierowca:document.getElementById('edit-kierowca').value,
+    ciagnik:editCiagnik,
+    naczepa:editNaczepa,
+    pojazd:editCiagnik+(editNaczepa?' + '+editNaczepa:''),
+    data:document.getElementById('edit-data').value,
+    wz:document.getElementById('edit-wz').value,
+    naftobaza:pobierzNaftobazeEdit(),
+    kmStart:kms, kmKoniec:kmk, km:kmk-kms,
+    tankowanie:{litry:tankL,kmPrzyTankowaniu:tankKm,spalanieL100km:spalanie},
+    produkty:produkty,
+    ts:nowyTs,
+    wersja:poprzedniaWersja+1,
+    koryguje_ts:oryginalTs,
+    powod_korekty:powodKorekty,
+    czas_utworzenia:new Date().toISOString(),
+    autor_korekty:adminOdblokowany?'biuro':(aktywnyKierowca||'nieznany'),
+    wyslane:false
+  };
+  // Oryginał dostaje flagę "skorygowany_przez" – ale jego treść (wartości) zostaje nietknięta
+  hist[idx].skorygowany_przez=nowyTs;
+  // Jeśli to była już korekta (wersja>1), odnotowujemy że teraz ona też jest skorygowana
+  hist.push(korekta);
+  if(hist.length>200) hist=hist.slice(-200);
+  saveHistoria(hist);
+  // Wysyłamy korektę z akcją "KOREKTA" – Apps Script musi ją odróżnić od EDYCJI (która była nadpisaniem)
+  var payloadDoSheets=Object.assign({},korekta,{akcja:'KOREKTA'});
+  if(isOnline){
+    safeFetch(payloadDoSheets).then(function(){
+      var h=getHistoria(); h.forEach(function(x){ if(x.ts===nowyTs) x.wyslane=true; }); saveHistoria(h);
+      renderHistoria();
+    }).catch(function(){
+      var ocz=getOczekujace();
+      ocz.push(payloadDoSheets);
+      saveOczekujace(ocz);
+    });
+  } else {
+    var ocz=getOczekujace();
+    ocz.push(payloadDoSheets);
+    saveOczekujace(ocz);
+  }
+  zamknijEdycje();
+  renderHistoria();
+  alert('✅ Korekta zapisana (wersja '+(poprzedniaWersja+1)+'). Oryginał pozostaje w historii.');
+}
+
+// ===== PRODUKTY =====
+var PROGRAMY={
+  ON:[{nr:11,typ:'RZ',wsp:2},{nr:12,typ:'RZ',wsp:3},{nr:13,typ:'RZ',wsp:4},{nr:14,typ:'15',wsp:2},{nr:15,typ:'15',wsp:3},{nr:16,typ:'15',wsp:4},{nr:23,typ:'RZ',wsp:3},{nr:24,typ:'15',wsp:3},{nr:99,typ:'RZ',wsp:0,grawitacja:true}],
+  PB:[{nr:17,typ:'RZ',wsp:2},{nr:18,typ:'15',wsp:2},{nr:99,typ:'RZ',wsp:0,grawitacja:true}],
+  OP:[{nr:21,typ:'RZ',wsp:2},{nr:22,typ:'15',wsp:2}]
+};
+var produktCount=0, selectedProgs={};
+
+function obliczSpalanie(){
+  var litry=parseFloat(document.getElementById('tank-litry').value);
+  var tankKm=parseFloat(document.getElementById('tank-km').value);
+  var wynik=document.getElementById('spalanie-wynik');
+  if(tankKm>0&&litry>0){
+    wynik.style.display='block';
+    document.getElementById('spal-val').textContent=(litry/tankKm*100).toFixed(1)+' l/100km';
+  } else { wynik.style.display='none'; }
+}
+
+function dodajProdukt(){
+  if(produktCount>=3){ alert('Maksymalnie 3 produkty!'); return; }
+  produktCount++; var id=produktCount; selectedProgs[id]=null;
+  var div=document.createElement('div'); div.className='card'; div.id='produkt-'+id; div.style.borderLeft='4px solid #2563eb';
+  div.innerHTML='<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">PRODUKT '+id+
+    (id>1?'<button class="btn-remove" onclick="usunProdukt('+id+')">✕ Usuń</button>':'')+
+    '</div><label style="margin-top:0">Rodzaj paliwa *</label>'+
+    '<select id="pal-'+id+'" onchange="renderProgramy('+id+')"><option value="">– wybierz –</option><option value="ON">ON – Olej napędowy</option><option value="PB">PB95 – Benzyna</option><option value="OP">Olej opałowy</option></select>'+
+    '<label>Program rozlewania *</label><div class="prog-grid" id="progi-'+id+'"><p style="color:#94a3b8;font-size:13px;grid-column:1/-1;">Najpierw wybierz paliwo</p></div>'+
+    '<div class="section-bg"><div class="section-label" style="color:#2563eb;">📋 Załadunek (z WZ)</div>'+
+    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="zal-rz-'+id+'" placeholder="0" inputmode="numeric"></div>'+
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="zal-15-'+id+'" placeholder="0" inputmode="numeric"></div></div></div>'+
+    '<div class="section-bg" style="border-color:#fed7aa;"><div class="section-label" style="color:#ea580c;">🔧 Rozlane u klientów</div>'+
+    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="roz-rz-'+id+'" placeholder="0" inputmode="numeric"></div>'+
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="roz-15-'+id+'" placeholder="0" inputmode="numeric"></div></div></div>';
+  document.getElementById('produkty').appendChild(div);
+  if(produktCount>=3) document.getElementById('btn-dodaj').style.display='none';
+}
+function usunProdukt(id){
+  var el=document.getElementById('produkt-'+id); if(el) el.remove();
+  delete selectedProgs[id];
+  produktCount--;
+  if(produktCount<3) document.getElementById('btn-dodaj').style.display='block';
+}
+function renderProgramy(id){
+  var pal=document.getElementById('pal-'+id).value;
+  var cont=document.getElementById('progi-'+id);
+  selectedProgs[id]=null;
+  if(!pal){ cont.innerHTML='<p style="color:#94a3b8;font-size:13px;grid-column:1/-1;">Najpierw wybierz paliwo</p>'; return; }
+  cont.innerHTML='';
+  PROGRAMY[pal].forEach(function(p){
+    var btn=document.createElement('div'); btn.className='prog'; btn.id='prog-'+id+'-'+p.nr;
+    if(p.grawitacja){
+      btn.innerHTML='GRAW';
+      btn.style.background='#fef3c7';
+      btn.style.borderColor='#f59e0b';
+      btn.style.color='#92400e';
+    } else {
+      btn.innerHTML=p.nr+'<br><span style="font-size:10px;font-weight:400;">'+p.typ+'</span>';
+    }
+    btn.onclick=function(){ selProg(id,p.nr); };
+    cont.appendChild(btn);
+  });
+}
+function selProg(id,nr){
+  selectedProgs[id]=nr;
+  PROGRAMY[document.getElementById('pal-'+id).value].forEach(function(p){
+    var el=document.getElementById('prog-'+id+'-'+p.nr); if(el) el.className='prog'+(p.nr===nr?' on':'');
+  });
+}
+function getProgData(palKey,nr){
+  if(!palKey||!nr) return null;
+  var progi=PROGRAMY[palKey];
+  for(var i=0;i<progi.length;i++) if(progi[i].nr===nr) return progi[i];
+  return null;
+}
+
+// ===== WALIDACJA =====
+function waliduj(){
+  var bledy=[];
+  if(!document.getElementById('kierowca').value) bledy.push('Kierowca nie wybrany');
+  if(!document.getElementById('ciagnik').value) bledy.push('Ciągnik nie wybrany');
+  if(!document.getElementById('data').value) bledy.push('Data trasy');
+  if(!document.getElementById('wz').value.trim()) bledy.push('Nr dokumentu WZ');
+  var nb=document.getElementById('naftobaza').value;
+  if(!nb) bledy.push('Naftobaza (miejsce załadunku)');
+  else if(nb==='Inna' && !document.getElementById('naftobaza-inna').value.trim()) bledy.push('Wpisz nazwę naftobazy');
+  var kms=document.getElementById('kms').value, kmk=document.getElementById('kmk').value;
+  if(!kms) bledy.push('Km start');
+  if(!kmk) bledy.push('Km koniec');
+  if(kms&&kmk&&parseFloat(kmk)<parseFloat(kms)) bledy.push('Km koniec musi być większy niż start');
+  var ids=Object.keys(selectedProgs);
+  var aktywne=ids.filter(function(id){ return document.getElementById('produkt-'+id); });
+  if(!aktywne.length) bledy.push('Dodaj przynajmniej jeden produkt');
+  aktywne.forEach(function(id){
+    if(!document.getElementById('pal-'+id).value) bledy.push('Produkt '+id+': rodzaj paliwa');
+    if(!selectedProgs[id]) bledy.push('Produkt '+id+': program rozlewania');
+    if(!document.getElementById('zal-rz-'+id).value) bledy.push('Produkt '+id+': załadunek RZ');
+    if(!document.getElementById('zal-15-'+id).value) bledy.push('Produkt '+id+': załadunek 15°C');
+    if(!document.getElementById('roz-rz-'+id).value) bledy.push('Produkt '+id+': rozlane RZ');
+    if(!document.getElementById('roz-15-'+id).value) bledy.push('Produkt '+id+': rozlane 15°C');
+    // Sanity checks – kompletne dane wymagane
+    var zRZ=parseFloat(document.getElementById('zal-rz-'+id).value);
+    var z15=parseFloat(document.getElementById('zal-15-'+id).value);
+    var rRZ=parseFloat(document.getElementById('roz-rz-'+id).value);
+    var r15=parseFloat(document.getElementById('roz-15-'+id).value);
+    if(!isNaN(zRZ)&&zRZ<=0) bledy.push('Produkt '+id+': załadunek RZ musi być większy niż 0');
+    if(!isNaN(z15)&&z15<=0) bledy.push('Produkt '+id+': załadunek 15°C musi być większy niż 0');
+    if(!isNaN(rRZ)&&rRZ<0) bledy.push('Produkt '+id+': rozlane RZ nie może być ujemne');
+    if(!isNaN(r15)&&r15<0) bledy.push('Produkt '+id+': rozlane 15°C nie może być ujemne');
+    if(!isNaN(zRZ)&&!isNaN(rRZ)&&rRZ>zRZ) bledy.push('Produkt '+id+': rozlane RZ ('+rRZ+') > załadunek RZ ('+zRZ+') – niemożliwe');
+    if(!isNaN(z15)&&!isNaN(r15)&&r15>z15) bledy.push('Produkt '+id+': rozlane 15°C ('+r15+') > załadunek 15°C ('+z15+') – niemożliwe');
+  });
+  return bledy;
+}
+
+// Walidacja "miękka" – ubytki ponad normę (nie blokuje, ale wymaga potwierdzenia + powodu)
+function sprawdzUbytkiKrytyczne(){
+  var ostrzezenia=[];
+  var ids=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
+  ids.forEach(function(id){
+    var pal=document.getElementById('pal-'+id).value;
+    var prog=selectedProgs[id];
+    var pd=getProgData(pal,prog);
+    if(!pd) return;
+    var typ=pd.typ;
+    var zalU=typ==='15'?parseFloat(document.getElementById('zal-15-'+id).value):parseFloat(document.getElementById('zal-rz-'+id).value);
+    var rozU=typ==='15'?parseFloat(document.getElementById('roz-15-'+id).value):parseFloat(document.getElementById('roz-rz-'+id).value);
+    if(isNaN(zalU)||isNaN(rozU)||zalU<=0) return;
+    var ubytek=zalU-rozU;
+    var procent=ubytek/zalU*100;
+    var norma=pd.wsp; // wsp w procentach
+    if(pd.grawitacja && ubytek>0){
+      ostrzezenia.push({id:id,produkt:'Produkt '+id+' (GRAWITACJA)',ubytek:ubytek.toFixed(2),procent:procent.toFixed(2),norma:'0%',powod:'GRAW – każdy ubytek wymaga wyjaśnienia'});
+    } else if(procent>norma+2){ // ponad normę o więcej niż 2pp
+      ostrzezenia.push({id:id,produkt:'Produkt '+id+' ('+pal+', program '+prog+')',ubytek:ubytek.toFixed(2),procent:procent.toFixed(2),norma:norma+'%',powod:''});
+    }
+  });
+  return ostrzezenia;
+}
+
+// ===== WYSYŁANIE FORMULARZA =====
+// _bufowanyPayload przechowuje dane między walidacją a potwierdzeniem ubytków.
+// Po kliknięciu "Potwierdzam i wysyłam" w modalu, finalne payloady są wysyłane.
+var _bufowanyPayload=null;
+
+function zbudujPayload(powodyUbytkow){
+  var kierowca=document.getElementById('kierowca').value;
+  var ciagnik=document.getElementById('ciagnik').value;
+  var naczepa=document.getElementById('naczepa').value;
+  var pojazd=ciagnik+(naczepa?' + '+naczepa:'');
+  var data=document.getElementById('data').value;
+  var wz=document.getElementById('wz').value.trim();
+  var naftobaza=pobierzNaftobaze();
+  var kms=parseFloat(document.getElementById('kms').value);
+  var kmk=parseFloat(document.getElementById('kmk').value);
+  var km=kmk-kms;
+  var produktyData=[];
+  var ids=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
+  ids.forEach(function(id){
+    var pal=document.getElementById('pal-'+id).value;
+    var prog=selectedProgs[id];
+    var zalRZ=parseFloat(document.getElementById('zal-rz-'+id).value)||0;
+    var zal15=parseFloat(document.getElementById('zal-15-'+id).value)||0;
+    var rozRZ=parseFloat(document.getElementById('roz-rz-'+id).value)||0;
+    var roz15=parseFloat(document.getElementById('roz-15-'+id).value)||0;
+    var pd=getProgData(pal,prog);
+    var wsp=pd?pd.wsp/100:0;
+    var typ=pd?pd.typ:'RZ';
+    var grawitacja=pd&&pd.grawitacja?true:false;
+    var zalU=typ==='15'?zal15:zalRZ;
+    var rozU=typ==='15'?roz15:rozRZ;
+    var norma=+(zalU*wsp).toFixed(2);
+    var roznica=+(zalU-rozU).toFixed(2);
+    var rozNetto=+(roznica-norma).toFixed(2);
+    // Status uwzględniający grawitację
+    var status;
+    if(grawitacja){
+      status = rozNetto<=0 ? 'OK – BEZ UBYTKÓW' : 'DO WYJAŚNIENIA';
+    } else {
+      status = rozNetto<0?'OSZCZĘDNOŚĆ':rozNetto<=10?'OK – W NORMIE':rozNetto<=50?'PONAD NORMĘ':'DUŻY UBYTEK';
+    }
+    var powodUbytku = powodyUbytkow && powodyUbytkow[id] ? powodyUbytkow[id] : '';
+    produktyData.push({nrProduktu:produktyData.length+1,paliwo:pal,program:prog,typProg:typ,grawitacja:grawitacja,zaladunek_RZ:zalRZ,zaladunek_15:zal15,rozlane_RZ:rozRZ,rozlane_15:roz15,normaUbytek:norma,roznica:roznica,roznicaNetto:rozNetto,status:status,powodUbytku:powodUbytku});
+  });
+  var tankLitry=parseFloat(document.getElementById('tank-litry').value)||0;
+  var tankKm=parseFloat(document.getElementById('tank-km').value)||0;
+  var spalanie=tankLitry>0&&tankKm>0?+(tankLitry/tankKm*100).toFixed(2):null;
+  var ts=Date.now();
+  // AUDIT TRAIL: każdy nowy wpis to wersja 1, brak korekty
+  return {
+    kierowca:kierowca, ciagnik:ciagnik, naczepa:naczepa, pojazd:pojazd,
+    data:data, wz:wz, naftobaza:naftobaza,
+    kmStart:kms, kmKoniec:kmk, km:km,
+    tankowanie:{litry:tankLitry,kmPrzyTankowaniu:tankKm,spalanieL100km:spalanie},
+    produkty:produktyData,
+    ts:ts, wersja:1, koryguje_ts:null, czas_utworzenia:new Date().toISOString()
+  };
+}
+
+function wyslij(){
+  // Blokada podwójnego kliknięcia – ważne przy wolnym necie
+  var btn=document.getElementById('btn-wyslij');
+  if(btn&&btn.disabled) return;
+
+  var bledy=waliduj();
+  var valBox=document.getElementById('val-box');
+  var valList=document.getElementById('val-list');
+  if(bledy.length){
+    valList.innerHTML=bledy.map(function(b){ return '<li>'+b+'</li>'; }).join('');
+    valBox.style.display='block';
+    valBox.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  valBox.style.display='none';
+
+  // Sprawdź ubytki krytyczne – jeśli są, pokaż modal z polami "powód"
+  var ostrzezenia=sprawdzUbytkiKrytyczne();
+  if(ostrzezenia.length){
+    pokazUbytekModal(ostrzezenia);
+    return;
+  }
+  // Brak ostrzeżeń – wysyłka bezpośrednia
+  wyslijFinalnie(zbudujPayload({}));
+}
+
+function pokazUbytekModal(ostrzezenia){
+  var lista=document.getElementById('ubytek-lista');
+  lista.innerHTML='';
+  ostrzezenia.forEach(function(o){
+    var div=document.createElement('div');
+    div.style.cssText='background:#fff;border:1px solid #fed7aa;border-left:4px solid #ea580c;border-radius:8px;padding:12px;margin-bottom:10px;';
+    div.innerHTML='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:16px;font-weight:900;color:#9a3412;margin-bottom:4px;">'+o.produkt+'</div>'+
+      '<div style="font-size:12px;color:#7c2d12;margin-bottom:8px;">Ubytek: <b>'+o.ubytek+' L</b> ('+o.procent+'%) &nbsp;|&nbsp; norma: '+o.norma+'</div>'+
+      '<label style="margin-top:0">Powód ubytku *</label>'+
+      '<select id="powod-'+o.id+'" onchange="wlaczInny(\''+o.id+'\')">'+
+      '<option value="">– wybierz –</option>'+
+      '<option value="Rozlanie u klienta">Rozlanie u klienta</option>'+
+      '<option value="Awaria sprzętu">Awaria sprzętu (pompy, węża)</option>'+
+      '<option value="Niedolane przez Naftobazę">Niedolane przez Naftobazę</option>'+
+      '<option value="Pomiar – błąd licznika">Pomiar – błąd licznika</option>'+
+      '<option value="Temperatura/parowanie">Temperatura / parowanie</option>'+
+      '<option value="Inna">Inna...</option>'+
+      '</select>'+
+      '<input type="text" id="powod-inny-'+o.id+'" placeholder="Opisz szczegółowo..." style="margin-top:6px;display:none;">';
+    lista.appendChild(div);
+  });
+  document.getElementById('ubytek-modal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+
+function wlaczInny(id){
+  var sel=document.getElementById('powod-'+id);
+  var inp=document.getElementById('powod-inny-'+id);
+  if(!sel||!inp) return;
+  inp.style.display=sel.value==='Inna'?'block':'none';
+  if(sel.value!=='Inna') inp.value='';
+}
+
+function zamknijUbytekModal(){
+  document.getElementById('ubytek-modal').style.display='none';
+  document.body.style.overflow='';
+}
+
+function potwierdzUbytkiIWyslij(){
+  var lista=document.getElementById('ubytek-lista');
+  var rows=lista.children;
+  var powody={};
+  var braki=[];
+  for(var i=0;i<rows.length;i++){
+    var sel=rows[i].querySelector('select[id^="powod-"]');
+    var inp=rows[i].querySelector('input[id^="powod-inny-"]');
+    if(!sel) continue;
+    var idMatch=sel.id.match(/powod-(.+)/);
+    if(!idMatch) continue;
+    var id=idMatch[1];
+    var v=sel.value;
+    if(!v){ braki.push('Produkt '+id); continue; }
+    if(v==='Inna'){
+      var op=(inp.value||'').trim();
+      if(!op){ braki.push('Produkt '+id+' – opisz "Inna"'); continue; }
+      powody[id]='Inna: '+op;
+    } else {
+      powody[id]=v;
+    }
+  }
+  if(braki.length){ alert('Wypełnij powód dla:\n• '+braki.join('\n• ')); return; }
+  zamknijUbytekModal();
+  wyslijFinalnie(zbudujPayload(powody));
+}
+
+function wyslijFinalnie(payload){
+  // Blokada podwójnego kliknięcia
+  var btn=document.getElementById('btn-wyslij');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Wysyłanie...'; }
+  var ts=payload.ts;
+  var hist=getHistoria();
+  hist.push(Object.assign({},payload,{wyslane:false}));
+  if(hist.length>200) hist=hist.slice(-200); // zwiększyłem limit – wpisy korygujące się dokładają
+  saveHistoria(hist);
+  lsRemove('cysterna_roboczy');
+  document.getElementById('draft-bar').classList.remove('show');
+  if(isOnline){
+    safeFetch(payload).then(function(){
+      var h=getHistoria(); h.forEach(function(x){ if(x.ts===ts) x.wyslane=true; }); saveHistoria(h);
+    }).catch(function(){
+      var ocz=getOczekujace(); ocz.push(payload); saveOczekujace(ocz);
+    });
+    document.getElementById('ok-ico').textContent='✅';
+    document.getElementById('ok-title').textContent='WYSŁANO!';
+    document.getElementById('ok-msg').textContent='Dane zapisane do Google Sheets!';
+    document.getElementById('ok-offline-info').style.display='none';
+  } else {
+    var ocz=getOczekujace(); ocz.push(payload); saveOczekujace(ocz);
+    document.getElementById('ok-ico').textContent='📴';
+    document.getElementById('ok-title').textContent='ZAPISANO!';
+    document.getElementById('ok-msg').textContent='Brak internetu – wyślemy automatycznie!';
+    document.getElementById('ok-offline-info').style.display='block';
+  }
+  document.getElementById('form-main').style.display='none';
+  document.getElementById('ok-screen').style.display='block';
+  if(btn){ btn.disabled=false; btn.textContent='✓ WYŚLIJ DANE'; }
+}
+
+function resetForm(){
+  ['kierowca','ciagnik','naczepa','wz','kms','kmk','tank-litry','tank-km','naftobaza','naftobaza-inna'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('naftobaza-inna').style.display='none';
+  document.getElementById('naczepa-wrap').style.display='none';
+  document.getElementById('btn-dodaj-przyczepe').style.display='block';
+  document.getElementById('data').valueAsDate=new Date();
+  document.getElementById('spalanie-wynik').style.display='none';
+  document.getElementById('val-box').style.display='none';
+  document.getElementById('produkty').innerHTML='';
+  produktCount=0; selectedProgs={};
+  document.getElementById('btn-dodaj').style.display='block';
+  document.getElementById('form-main').style.display='block';
+  document.getElementById('ok-screen').style.display='none';
+  dodajProdukt(); window.scrollTo(0,0);
+}
+
+// ===== POCZTA =====
+var POJAZDY_MAIL=[
+  {nr:'1',reg:'PO6S361',gmail:'representgroundz@gmail.com'},
+  {nr:'2',reg:'PKN99959',gmail:''},
+  {nr:'3',reg:'PKN78456',gmail:'PKN51571@gmail.com'},
+  {nr:'4',reg:'PKN67518',gmail:''},
+  {nr:'5',reg:'PKN43062',gmail:''}
+];
+function renderMail(){
+  var cont=document.getElementById('mail-list'); cont.innerHTML='';
+  POJAZDY_MAIL.forEach(function(p){
+    var div=document.createElement('div'); div.className='mail-car';
+    var url=p.gmail?'https://mail.google.com/mail/u/0/#inbox':'https://mail.google.com';
+    div.innerHTML='<h3>Pojazd '+p.nr+'</h3><div class="reg">Rejestracja: <b>'+p.reg+'</b>'+(p.gmail?' | '+p.gmail:'')+'</div>'+
+      '<a href="'+url+'" target="_blank" class="gmail-btn">📥 OTWÓRZ SKRZYNKĘ '+p.reg+'</a>';
+    cont.appendChild(div);
+  });
+}
+// ===== KALKULATOR =====
+function obliczRozliczenie(){
+  var km=parseFloat(document.getElementById('kalk-km').value)||0;
+  var stawka=parseFloat(document.getElementById('kalk-stawka').value)||0;
+  var dni=parseFloat(document.getElementById('kalk-dni').value)||0;
+  var dieta=parseFloat(document.getElementById('kalk-dieta').value)||0;
+  var premia=parseFloat(document.getElementById('kalk-premia').value)||0;
+  var potracenia=parseFloat(document.getElementById('kalk-potracenia').value)||0;
+  var wynikKm=km*stawka; var wynikDiety=dni*dieta;
+  var suma=wynikKm+wynikDiety+premia-potracenia;
+  document.getElementById('kalk-result').style.display='block';
+  document.getElementById('kalk-suma').textContent=suma.toFixed(2).replace('.',',')+' zł';
+  document.getElementById('kalk-szczeg').innerHTML='🛣️ Km: '+km+' × '+stawka+' zł = <b>'+wynikKm.toFixed(2)+' zł</b><br>🍽️ Diety: '+dni+' × '+dieta+' zł = <b>'+wynikDiety.toFixed(2)+' zł</b><br>'+(premia?'🏆 Premia: <b>'+premia.toFixed(2)+' zł</b><br>':'')+(potracenia?'➖ Potrącenia: <b>-'+potracenia.toFixed(2)+' zł</b><br>':'');
+}
+
+// ===== ZAKUP PALIWA =====
+function obliczZakup(){
+  var brutto=parseFloat(document.getElementById('zp-brutto').value);
+  var netto=parseFloat(document.getElementById('zp-netto').value);
+  var rz=parseFloat(document.getElementById('zp-rz').value);
+  var wynik=document.getElementById('zp-wynik');
+  if(rz>0&&brutto>0){
+    wynik.style.display='block';
+    document.getElementById('zp-wbr').textContent=(rz*brutto).toFixed(2)+' zł';
+    document.getElementById('zp-wne').textContent=netto>0?(rz*netto).toFixed(2)+' zł':'–';
+    document.getElementById('zp-vat').textContent=netto>0?(rz*(brutto-netto)).toFixed(2)+' zł':'–';
+  } else { wynik.style.display='none'; }
+}
+function zapiszZakup(){ alert('✅ Zakup zapisany!'); }
+
+// ===== KOSZTY =====
+// FIX #4: zamiast zostawiać puste obiekty (rozjeżdżały indeksy w onchange),
+// trzymamy strukturę {id, kat, kwota, opis} z unikalnym id i renderujemy listę od nowa
+// po każdej zmianie. Dzięki temu usunięcie nie powoduje desyncu.
+var kosztyStale=[], kosztyZmienne=[];
+var _kosztId=0;
+var KAT_STALE=['OC','AC','Opłata od środków transportu','Leasing','Inne stałe'];
+var KAT_ZMIENNE=['Opłaty e-TOLL','Paliwo (pojazd)','Naprawy','Koszty eksploatacji','Myjnia','Diety','Inne zmienne'];
+
+function dodajKoszt(typ){
+  var arr=typ==='stale'?kosztyStale:kosztyZmienne;
+  arr.push({id:++_kosztId, kat:'', kwota:0, opis:''});
+  renderKoszty(typ);
+}
+
+function usunKoszt(typ,id){
+  var arr=typ==='stale'?kosztyStale:kosztyZmienne;
+  var idx=arr.findIndex(function(x){ return x.id===id; });
+  if(idx!==-1) arr.splice(idx,1);
+  renderKoszty(typ);
+  przeliczKoszty();
+}
+
+function aktualizujKoszt(typ,id,pole,wartosc){
+  var arr=typ==='stale'?kosztyStale:kosztyZmienne;
+  var item=arr.find(function(x){ return x.id===id; });
+  if(!item) return;
+  if(pole==='kwota') item.kwota=parseFloat(wartosc)||0;
+  else item[pole]=wartosc;
+  if(pole==='kwota') przeliczKoszty();
+}
+
+function renderKoszty(typ){
+  var arr=typ==='stale'?kosztyStale:kosztyZmienne;
+  var cont=document.getElementById('koszty-'+typ+'-list');
+  var kats=typ==='stale'?KAT_STALE:KAT_ZMIENNE;
+  cont.innerHTML='';
+  arr.forEach(function(item){
+    var row=document.createElement('div');
+    row.className='koszt-row';
+    row.id='koszt-'+typ+'-'+item.id;
+    var katOpts=kats.map(function(k){
+      var sel=item.kat===k?' selected':'';
+      return '<option'+sel+'>'+k+'</option>';
+    }).join('');
+    row.innerHTML=
+      '<select style="flex:1;min-width:120px;" onchange="aktualizujKoszt(\''+typ+'\','+item.id+',\'kat\',this.value)">'+
+        '<option value="">Kategoria...</option>'+katOpts+
+      '</select>'+
+      '<input type="number" style="flex:.7;min-width:80px;" placeholder="zł" inputmode="decimal" value="'+(item.kwota||'')+'" oninput="aktualizujKoszt(\''+typ+'\','+item.id+',\'kwota\',this.value)">'+
+      '<button class="del-btn" onclick="usunKoszt(\''+typ+'\','+item.id+')">✕</button>'+
+      '<input type="text" style="flex:1;min-width:100%;margin-top:4px;" placeholder="Opis / faktura nr..." value="'+(item.opis||'')+'" oninput="aktualizujKoszt(\''+typ+'\','+item.id+',\'opis\',this.value)">';
+    cont.appendChild(row);
+  });
+}
+
+function przeliczKoszty(){
+  var ss=kosztyStale.reduce(function(a,b){ return a+(b.kwota||0); },0);
+  var sz=kosztyZmienne.reduce(function(a,b){ return a+(b.kwota||0); },0);
+  document.getElementById('suma-stale').textContent=ss.toFixed(2).replace('.',',')+' zł';
+  document.getElementById('suma-zmienne').textContent=sz.toFixed(2).replace('.',',')+' zł';
+  document.getElementById('suma-total').textContent=(ss+sz).toFixed(2).replace('.',',')+' zł';
+}
+
+// ============================================================
+// ===== MODUŁ FINANSE (lokalny, prywatny, bez wysyłki) =====
+// ============================================================
+//
+// Architektura:
+// - cysterna_fin_tx        – array transakcji [{ts, data, brutto, netto, vat, kategoria, dostawca, opis, pojazd, platnosc}]
+// - cysterna_fin_budzety   – obj { 'YYYY-MM': { 'kategoria': limit_zl } } LUB { '_default': { 'kategoria': limit_zl } } – domyślny stosowany gdy brak miesięcznego
+// - cysterna_fin_kategorie – array nazw kategorii (modyfikowalna)
+// - cysterna_fin_uczenie   – obj { 'normalized_dostawca/opis': 'kategoria' } – pamięć kategoryzacji
+//
+// Wszystkie operacje są lokalne. Nic nie jest wysyłane do safeFetch().
+
+var KATEGORIE_DOMYSLNE = [
+  'Paliwo (samochód)',
+  'Naprawy / serwis',
+  'Opłaty drogowe (e-TOLL)',
+  'Ubezpieczenia (OC/AC)',
+  'Leasing / rata',
+  'Opłaty od środków transportu',
+  'Diety i delegacje',
+  'Wynagrodzenia',
+  'Telefon / internet',
+  'Materiały biurowe',
+  'Księgowość',
+  'Myjnia',
+  'Parking',
+  'Naftobaza – zakup paliwa',
+  'Mandaty',
+  'Inne'
+];
+
+// Reguły słownikowe – fragment dostawcy/opisu → sugerowana kategoria
+var REGULY_KATEGORII = [
+  { wzor:/orlen|bp|shell|circle\s*k|moya|lotos|amic|lukoil|stacja paliw|cpn/i, kat:'Paliwo (samochód)' },
+  { wzor:/etoll|e-toll|e\.toll|via\s*toll|autostrada|opłata drogowa/i, kat:'Opłaty drogowe (e-TOLL)' },
+  { wzor:/serwis|warsztat|naprawa|opon|wulkanizac|mechanik|części/i, kat:'Naprawy / serwis' },
+  { wzor:/leasing|rata|raty|millennium|pko leasing|pekao leasing|idea/i, kat:'Leasing / rata' },
+  { wzor:/oc\b|ac\b|polisa|ubezpiecz|pzu|warta|allianz|hdi|generali|ergo/i, kat:'Ubezpieczenia (OC/AC)' },
+  { wzor:/myjni|car wash|umycie/i, kat:'Myjnia' },
+  { wzor:/parking|postoj/i, kat:'Parking' },
+  { wzor:/mandat|grzywna|kara/i, kat:'Mandaty' },
+  { wzor:/orange|play|t-mobile|plus\b|nju|abonament|telefon|internet/i, kat:'Telefon / internet' },
+  { wzor:/biuro rachunkow|księgow|ksiegow/i, kat:'Księgowość' },
+  { wzor:/naftobaza|cysterna|hurt paliw/i, kat:'Naftobaza – zakup paliwa' },
+  { wzor:/dieta|delegacja/i, kat:'Diety i delegacje' },
+  { wzor:/wynagrodzen|pensja|wypłata/i, kat:'Wynagrodzenia' }
+];
+
+// ===== STORAGE (FINANSE) =====
+function getTx(){ try{ return JSON.parse(lsGet('cysterna_fin_tx')||'[]'); }catch(e){ return []; } }
+function saveTx(arr){ try{ lsSet('cysterna_fin_tx',JSON.stringify(arr)); return true; }catch(e){ alert('⚠️ Brak miejsca w pamięci. Wyeksportuj dane i zwolnij miejsce.'); return false; } }
+function getBudzety(){ try{ return JSON.parse(lsGet('cysterna_fin_budzety')||'{"_default":{}}'); }catch(e){ return {_default:{}}; } }
+function saveBudzety(obj){ try{ lsSet('cysterna_fin_budzety',JSON.stringify(obj)); }catch(e){} }
+function getKategorie(){
+  try{
+    var s=lsGet('cysterna_fin_kategorie');
+    if(s){ var p=JSON.parse(s); if(p&&p.length) return p; }
+  }catch(e){}
+  return KATEGORIE_DOMYSLNE.slice();
+}
+function saveKategorie(arr){ try{ lsSet('cysterna_fin_kategorie',JSON.stringify(arr)); }catch(e){} }
+function getUczenie(){ try{ return JSON.parse(lsGet('cysterna_fin_uczenie')||'{}'); }catch(e){ return {}; } }
+function saveUczenie(o){ try{ lsSet('cysterna_fin_uczenie',JSON.stringify(o)); }catch(e){} }
+
+function normalizujKlucz(s){ return (s||'').toLowerCase().replace(/[^a-z0-9ąćęłńóśźżäöü ]/gi,'').replace(/\s+/g,' ').trim().slice(0,80); }
+
+// ===== AUTOMATYCZNA KATEGORYZACJA =====
+function sugerujKategorie(dostawca, opis){
+  // 1) Pamięć (uczenie) – jeśli identyczny dostawca/opis był już skategoryzowany
+  var u=getUczenie();
+  var klDost=normalizujKlucz(dostawca);
+  var klOpis=normalizujKlucz(opis);
+  if(klDost && u[klDost]) return { kat:u[klDost], zrodlo:'pamięć' };
+  if(klOpis && u[klOpis]) return { kat:u[klOpis], zrodlo:'pamięć' };
+  // 2) Reguły słownikowe
+  var laczone=(dostawca||'')+' '+(opis||'');
+  for(var i=0;i<REGULY_KATEGORII.length;i++){
+    if(REGULY_KATEGORII[i].wzor.test(laczone)) return { kat:REGULY_KATEGORII[i].kat, zrodlo:'reguła' };
+  }
+  return null;
+}
+function uczKategoryzator(dostawca, opis, kategoria){
+  if(!kategoria) return;
+  var u=getUczenie();
+  var klDost=normalizujKlucz(dostawca);
+  var klOpis=normalizujKlucz(opis);
+  if(klDost) u[klDost]=kategoria;
+  if(klOpis && klOpis!==klDost) u[klOpis]=kategoria;
+  saveUczenie(u);
+}
+
+// ===== UI: PRZEŁĄCZANIE PANELI =====
+function finPrzelacz(panel){
+  ['tx','bud','ana','eks'].forEach(function(p){
+    var pane=document.getElementById('fin-panel-'+p);
+    var tab=document.getElementById('fin-tab-'+p);
+    if(pane) pane.style.display=p===panel?'block':'none';
+    if(tab){
+      if(p===panel){ tab.style.background='#ede9fe'; tab.style.color='#5b21b6'; tab.style.fontWeight='800'; }
+      else { tab.style.background='#f1f5f9'; tab.style.color='#475569'; tab.style.fontWeight='700'; }
+    }
+  });
+  if(panel==='tx') renderujTransakcje();
+  if(panel==='bud') renderujBudzety();
+  if(panel==='ana') renderujAnalize();
+  if(panel==='eks') renderujStatusBackupu();
+}
+
+// ===== TRANSAKCJE: FORMULARZ =====
+function wypelnijSelectyTx(){
+  var kats=getKategorie();
+  var sel=document.getElementById('tx-kategoria');
+  if(sel){
+    sel.innerHTML='<option value="">– wybierz –</option>'+kats.map(function(k){ return '<option>'+k+'</option>'; }).join('');
+  }
+  var fk=document.getElementById('tx-filtr-kat');
+  if(fk){
+    var current=fk.value;
+    fk.innerHTML='<option value="">Wszystkie kategorie</option>'+kats.map(function(k){ return '<option>'+k+'</option>'; }).join('');
+    fk.value=current;
+  }
+  // Pojazdy
+  var poj=document.getElementById('tx-pojazd');
+  if(poj){
+    var c=getCiagniki();
+    var current=poj.value;
+    poj.innerHTML='<option value="">– brak / cała firma –</option>'+c.map(function(r){ return '<option>'+r+'</option>'; }).join('');
+    poj.value=current;
+  }
+  // Filtr miesięcy – tylko miesiące, które są w danych
+  var fm=document.getElementById('tx-filtr-miesiac');
+  if(fm){
+    var current=fm.value;
+    var msc={};
+    getTx().forEach(function(t){ if(t.data) msc[t.data.slice(0,7)]=true; });
+    var lista=Object.keys(msc).sort().reverse();
+    fm.innerHTML='<option value="">Wszystkie miesiące</option>'+lista.map(function(m){ return '<option value="'+m+'">'+formatujMiesiac(m)+'</option>'; }).join('');
+    fm.value=current;
+  }
+}
+
+function formatujMiesiac(yyyymm){
+  if(!yyyymm) return '';
+  var nazwy=['styczeń','luty','marzec','kwiecień','maj','czerwiec','lipiec','sierpień','wrzesień','październik','listopad','grudzień'];
+  var p=yyyymm.split('-');
+  return nazwy[parseInt(p[1])-1]+' '+p[0];
+}
+
+function txObliczNetto(){
+  var brutto=parseFloat(document.getElementById('tx-brutto').value);
+  var vatTxt=document.getElementById('tx-vat').value;
+  var nettoEl=document.getElementById('tx-netto');
+  if(isNaN(brutto)||brutto<=0){ nettoEl.value=''; return; }
+  if(vatTxt==='ZW'||vatTxt==='NP'){ nettoEl.value=brutto.toFixed(2); return; }
+  var v=parseFloat(vatTxt)||0;
+  var netto=brutto/(1+v/100);
+  nettoEl.value=netto.toFixed(2);
+}
+
+function txProponuj(){
+  txObliczNetto();
+  var dostawca=document.getElementById('tx-dostawca').value;
+  var opis=document.getElementById('tx-opis').value;
+  var sel=document.getElementById('tx-kategoria');
+  // Nie nadpisuj jeśli użytkownik już ręcznie wybrał coś innego niż pusto
+  if(sel.value) { document.getElementById('tx-sugestia').style.display='none'; return; }
+  var sug=sugerujKategorie(dostawca,opis);
+  var sugBox=document.getElementById('tx-sugestia');
+  var sugTekst=document.getElementById('tx-sugestia-tekst');
+  if(sug){
+    sugTekst.textContent=sug.kat+' ('+sug.zrodlo+')';
+    sugBox.style.display='inline';
+    sugBox.dataset.kat=sug.kat;
+  } else {
+    sugBox.style.display='none';
+  }
+}
+
+function txAkceptujSugestie(){
+  var sugBox=document.getElementById('tx-sugestia');
+  var kat=sugBox.dataset.kat;
+  if(kat) document.getElementById('tx-kategoria').value=kat;
+  sugBox.style.display='none';
+}
+
+function txZapisz(){
+  var data=document.getElementById('tx-data').value;
+  var brutto=parseFloat(document.getElementById('tx-brutto').value);
+  var vat=document.getElementById('tx-vat').value;
+  var netto=parseFloat(document.getElementById('tx-netto').value);
+  var dostawca=document.getElementById('tx-dostawca').value.trim();
+  var opis=document.getElementById('tx-opis').value.trim();
+  var kategoria=document.getElementById('tx-kategoria').value;
+  var pojazd=document.getElementById('tx-pojazd').value;
+  var platnosc=document.getElementById('tx-platnosc').value;
+  var bledy=[];
+  if(!data) bledy.push('data');
+  if(isNaN(brutto)||brutto<=0) bledy.push('kwota brutto > 0');
+  if(!kategoria) bledy.push('kategoria');
+  if(!dostawca && !opis) bledy.push('dostawca lub opis');
+  if(bledy.length){ alert('Uzupełnij: '+bledy.join(', ')); return; }
+  var tx=getTx();
+  tx.push({
+    ts:Date.now(), data:data,
+    brutto:+brutto.toFixed(2),
+    netto:isNaN(netto)?+brutto.toFixed(2):+netto.toFixed(2),
+    vat:vat,
+    kategoria:kategoria, dostawca:dostawca, opis:opis,
+    pojazd:pojazd||'', platnosc:platnosc,
+    czas_utworzenia:new Date().toISOString()
+  });
+  if(!saveTx(tx)) return; // brak miejsca → komunikat już pokazany
+  uczKategoryzator(dostawca, opis, kategoria);
+  // Reset formularza
+  ['tx-brutto','tx-netto','tx-dostawca','tx-opis'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('tx-kategoria').value='';
+  document.getElementById('tx-pojazd').value='';
+  document.getElementById('tx-sugestia').style.display='none';
+  // Render
+  wypelnijSelectyTx();
+  renderujTransakcje();
+  sprawdzCzyTrzebaBackup();
+}
+
+function renderujTransakcje(){
+  var lista=getTx();
+  var szukaj=(document.getElementById('tx-szukaj')||{}).value||'';
+  var fkat=(document.getElementById('tx-filtr-kat')||{}).value||'';
+  var fmsc=(document.getElementById('tx-filtr-miesiac')||{}).value||'';
+  var s=szukaj.toLowerCase();
+  var filt=lista.filter(function(t){
+    if(fkat && t.kategoria!==fkat) return false;
+    if(fmsc && (t.data||'').slice(0,7)!==fmsc) return false;
+    if(s){
+      var hay=((t.dostawca||'')+' '+(t.opis||'')+' '+(t.kategoria||'')).toLowerCase();
+      if(hay.indexOf(s)===-1) return false;
+    }
+    return true;
+  });
+  // Posortowane po dacie malejąco
+  filt.sort(function(a,b){ return (b.data||'').localeCompare(a.data||'') || (b.ts||0)-(a.ts||0); });
+  // Podsumowanie
+  var sumaB=filt.reduce(function(a,t){ return a+(t.brutto||0); },0);
+  var sumaN=filt.reduce(function(a,t){ return a+(t.netto||0); },0);
+  var podsum=document.getElementById('tx-podsumowanie');
+  if(filt.length){
+    podsum.style.display='block';
+    podsum.innerHTML='Pokazano: '+filt.length+' transakcji &nbsp;|&nbsp; brutto: '+sumaB.toFixed(2).replace('.',',')+' zł &nbsp;|&nbsp; netto: '+sumaN.toFixed(2).replace('.',',')+' zł';
+  } else {
+    podsum.style.display='none';
+  }
+  var cont=document.getElementById('tx-lista');
+  if(!lista.length){
+    cont.innerHTML='<p style="color:#94a3b8;text-align:center;padding:20px;font-size:13px;">Brak transakcji. Dodaj pierwszą u góry.</p>';
+    return;
+  }
+  if(!filt.length){
+    cont.innerHTML='<p style="color:#94a3b8;text-align:center;padding:20px;font-size:13px;">Brak transakcji pasujących do filtrów.</p>';
+    return;
+  }
+  cont.innerHTML='';
+  filt.forEach(function(t){
+    var div=document.createElement('div');
+    div.style.cssText='background:#fff;border:1px solid #e2e8f0;border-left:3px solid #7c3aed;border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:13px;';
+    var pojazdInfo = t.pojazd?'<span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;margin-right:4px;">🚛 '+t.pojazd+'</span>':'';
+    var vatInfo = (t.vat==='ZW'||t.vat==='NP') ? t.vat : t.vat+'%';
+    div.innerHTML=
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'+
+        '<div style="flex:1;min-width:0;">'+
+          '<div style="font-weight:800;color:#1e293b;">'+(t.dostawca||t.opis||'(bez nazwy)')+'</div>'+
+          '<div style="color:#64748b;font-size:11px;margin-top:2px;">'+pojazdInfo+'📅 '+(t.data||'?')+' &nbsp;•&nbsp; '+t.kategoria+(t.opis&&t.dostawca?' &nbsp;•&nbsp; '+t.opis:'')+'</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0;">'+
+          '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;font-weight:900;color:#5b21b6;">'+t.brutto.toFixed(2).replace('.',',')+' zł</div>'+
+          '<div style="font-size:10px;color:#64748b;">VAT '+vatInfo+' • netto '+(t.netto||0).toFixed(2)+' zł</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:6px;margin-top:8px;">'+
+        '<button class="btn-sm" style="font-size:11px;padding:3px 8px;" onclick="txEdytuj('+t.ts+')">✏️</button>'+
+        '<button class="btn-sm" style="font-size:11px;padding:3px 8px;background:#fee2e2;color:#b91c1c;" onclick="txUsun('+t.ts+')">🗑️</button>'+
+        '<span style="flex:1;"></span>'+
+        '<span style="font-size:10px;color:#94a3b8;align-self:center;">💳 '+(t.platnosc||'?')+'</span>'+
+      '</div>';
+    cont.appendChild(div);
+  });
+}
+
+function txUsun(ts){
+  if(!confirm('Usunąć tę transakcję?')) return;
+  var tx=getTx().filter(function(t){ return t.ts!==ts; });
+  saveTx(tx);
+  wypelnijSelectyTx();
+  renderujTransakcje();
+}
+
+function txEdytuj(ts){
+  var t=getTx().find(function(x){ return x.ts===ts; });
+  if(!t) return;
+  // Wczytaj do formularza
+  document.getElementById('tx-data').value=t.data||'';
+  document.getElementById('tx-brutto').value=t.brutto||'';
+  document.getElementById('tx-vat').value=t.vat||'23';
+  document.getElementById('tx-netto').value=t.netto||'';
+  document.getElementById('tx-dostawca').value=t.dostawca||'';
+  document.getElementById('tx-opis').value=t.opis||'';
+  document.getElementById('tx-kategoria').value=t.kategoria||'';
+  document.getElementById('tx-pojazd').value=t.pojazd||'';
+  document.getElementById('tx-platnosc').value=t.platnosc||'Karta firmowa';
+  // Usuń starą wersję; po zapisaniu pojawi się nowa
+  txUsunBezPotwierdzenia(ts);
+  document.getElementById('tx-data').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function txUsunBezPotwierdzenia(ts){
+  var tx=getTx().filter(function(t){ return t.ts!==ts; });
+  saveTx(tx);
+  wypelnijSelectyTx();
+  renderujTransakcje();
+}
+
+// ===== BUDŻETY =====
+function biezacyMiesiac(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+
+function pobierzLimit(miesiac, kategoria){
+  var b=getBudzety();
+  if(b[miesiac] && typeof b[miesiac][kategoria]==='number') return b[miesiac][kategoria];
+  if(b._default && typeof b._default[kategoria]==='number') return b._default[kategoria];
+  return 0;
+}
+
+function ustawLimit(miesiac, kategoria, kwota){
+  var b=getBudzety();
+  if(!b[miesiac]) b[miesiac]={};
+  if(kwota>0) b[miesiac][kategoria]=kwota;
+  else delete b[miesiac][kategoria];
+  saveBudzety(b);
+}
+function ustawLimitDomyslny(kategoria, kwota){
+  var b=getBudzety();
+  if(!b._default) b._default={};
+  if(kwota>0) b._default[kategoria]=kwota;
+  else delete b._default[kategoria];
+  saveBudzety(b);
+}
+
+function sumaWydatkowMiesiac(miesiac, kategoria){
+  return getTx().filter(function(t){
+    return (t.data||'').slice(0,7)===miesiac && t.kategoria===kategoria;
+  }).reduce(function(a,t){ return a+(t.brutto||0); },0);
+}
+
+function renderujBudzety(){
+  var msc=document.getElementById('bud-miesiac').value || biezacyMiesiac();
+  if(!document.getElementById('bud-miesiac').value) document.getElementById('bud-miesiac').value=msc;
+  var kats=getKategorie();
+  var cont=document.getElementById('bud-lista');
+  cont.innerHTML='';
+  // Suma globalna
+  var sumaWydatkow=0, sumaLimit=0;
+  kats.forEach(function(kat){
+    var limit=pobierzLimit(msc,kat);
+    var wydane=sumaWydatkowMiesiac(msc,kat);
+    sumaWydatkow+=wydane;
+    sumaLimit+=limit;
+  });
+  var topBox=document.createElement('div');
+  topBox.style.cssText='background:#1e3a8a;color:#fff;border-radius:10px;padding:12px;margin-bottom:12px;text-align:center;';
+  topBox.innerHTML='<div style="font-size:11px;opacity:.8;text-transform:uppercase;letter-spacing:.5px;">Razem '+formatujMiesiac(msc)+'</div>'+
+    '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:26px;font-weight:900;">'+sumaWydatkow.toFixed(2).replace('.',',')+' zł</div>'+
+    (sumaLimit>0?'<div style="font-size:11px;opacity:.8;">z limitu '+sumaLimit.toFixed(2).replace('.',',')+' zł ('+(sumaWydatkow/sumaLimit*100).toFixed(0)+'%)</div>':'<div style="font-size:11px;opacity:.8;">brak ustawionych limitów</div>');
+  cont.appendChild(topBox);
+
+  kats.forEach(function(kat){
+    var limit=pobierzLimit(msc,kat);
+    var wydane=sumaWydatkowMiesiac(msc,kat);
+    var procent=limit>0?(wydane/limit*100):0;
+    var kolor='#10b981'; // zielony
+    if(procent>=100) kolor='#ef4444'; // czerwony
+    else if(procent>=80) kolor='#f59e0b'; // żółty
+    var widthBar=Math.min(procent,100);
+    var alarm='';
+    if(limit>0 && procent>=100) alarm='<span style="color:#b91c1c;font-weight:800;">⚠️ PRZEKROCZONY o '+(wydane-limit).toFixed(2)+' zł</span>';
+    else if(limit>0 && procent>=80) alarm='<span style="color:#92400e;font-weight:700;">⚠ Uwaga: '+procent.toFixed(0)+'%</span>';
+
+    var div=document.createElement('div');
+    div.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:8px;';
+    div.innerHTML=
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13px;">'+
+        '<span style="font-weight:800;color:#1e293b;">'+kat+'</span>'+
+        '<span style="color:#64748b;">'+wydane.toFixed(2)+' / <input type="number" placeholder="limit" value="'+(limit||'')+'" style="width:80px;padding:3px 6px;font-size:13px;border:1px solid #e2e8f0;border-radius:4px;text-align:right;" onchange="ustawLimit(\''+msc+'\',\''+kat.replace(/\'/g,"\\\'")+'\',parseFloat(this.value)||0);renderujBudzety()"> zł</span>'+
+      '</div>'+
+      (limit>0?'<div style="background:#f1f5f9;height:8px;border-radius:4px;overflow:hidden;"><div style="background:'+kolor+';height:100%;width:'+widthBar+'%;transition:width .3s;"></div></div>':'<div style="font-size:11px;color:#94a3b8;">Brak limitu</div>')+
+      (alarm?'<div style="margin-top:6px;font-size:12px;">'+alarm+'</div>':'');
+    cont.appendChild(div);
+  });
+}
+
+// ===== ANALIZA =====
+function renderujAnalize(){
+  var od=document.getElementById('ana-od').value;
+  var doD=document.getElementById('ana-do').value;
+  if(!od || !doD){
+    // Domyślnie ostatnie 3 miesiące
+    var d=new Date();
+    var doStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    d.setMonth(d.getMonth()-2);
+    var odStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    if(!od){ document.getElementById('ana-od').value=odStr; od=odStr; }
+    if(!doD){ document.getElementById('ana-do').value=doStr; doD=doStr; }
+  }
+  var tx=getTx().filter(function(t){
+    var m=(t.data||'').slice(0,7);
+    return m>=od && m<=doD;
+  });
+  var cont=document.getElementById('ana-wynik');
+  if(!tx.length){
+    cont.innerHTML='<p style="color:#94a3b8;text-align:center;padding:20px;font-size:13px;">Brak transakcji w tym zakresie.</p>';
+    return;
+  }
+  // Agregacje
+  var poKat={}, poPojezdzie={}, poMsc={};
+  var sumaB=0, sumaN=0;
+  tx.forEach(function(t){
+    sumaB+=t.brutto||0; sumaN+=t.netto||0;
+    var k=t.kategoria||'(brak)';
+    poKat[k]=(poKat[k]||0)+(t.brutto||0);
+    var p=t.pojazd||'(cała firma)';
+    poPojezdzie[p]=(poPojezdzie[p]||0)+(t.brutto||0);
+    var m=(t.data||'').slice(0,7);
+    if(m) poMsc[m]=(poMsc[m]||0)+(t.brutto||0);
+  });
+
+  var html='';
+  // Podsumowanie
+  html+='<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:12px;margin-bottom:14px;text-align:center;">'+
+    '<div style="font-size:11px;color:#5b21b6;text-transform:uppercase;letter-spacing:.5px;">Razem ('+tx.length+' transakcji)</div>'+
+    '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:30px;font-weight:900;color:#5b21b6;">'+sumaB.toFixed(2).replace('.',',')+' zł</div>'+
+    '<div style="font-size:11px;color:#7c3aed;">netto: '+sumaN.toFixed(2).replace('.',',')+' zł • VAT: '+(sumaB-sumaN).toFixed(2).replace('.',',')+' zł</div>'+
+    '</div>';
+
+  // Pie chart kategorii (SVG)
+  html+='<h3 style="font-family:\'Barlow Condensed\',sans-serif;color:#5b21b6;margin-top:6px;font-size:14px;letter-spacing:1px;text-transform:uppercase;">📊 Wg kategorii</h3>';
+  html+=rysujPieChart(poKat, sumaB);
+  // Ranking kategorii
+  var ranking=Object.keys(poKat).map(function(k){ return [k,poKat[k]]; }).sort(function(a,b){ return b[1]-a[1]; });
+  html+='<div style="margin-top:8px;">';
+  ranking.forEach(function(r){
+    var procent=sumaB>0?(r[1]/sumaB*100):0;
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#fff;border:1px solid #f1f5f9;border-radius:6px;margin-bottom:4px;font-size:13px;">'+
+      '<span style="font-weight:600;color:#1e293b;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r[0]+'</span>'+
+      '<span style="color:#64748b;font-size:11px;margin:0 8px;">'+procent.toFixed(1)+'%</span>'+
+      '<span style="font-weight:800;color:#5b21b6;">'+r[1].toFixed(2).replace('.',',')+' zł</span>'+
+    '</div>';
+  });
+  html+='</div>';
+
+  // Wg pojazdu
+  html+='<h3 style="font-family:\'Barlow Condensed\',sans-serif;color:#5b21b6;margin-top:14px;font-size:14px;letter-spacing:1px;text-transform:uppercase;">🚛 Wg pojazdu</h3>';
+  var poPojSort=Object.keys(poPojezdzie).map(function(k){ return [k,poPojezdzie[k]]; }).sort(function(a,b){ return b[1]-a[1]; });
+  poPojSort.forEach(function(r){
+    var procent=sumaB>0?(r[1]/sumaB*100):0;
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#dbeafe;border-radius:6px;margin-bottom:4px;font-size:13px;">'+
+      '<span style="font-weight:800;color:#1e40af;">'+r[0]+'</span>'+
+      '<span style="color:#1e3a8a;font-size:11px;margin:0 8px;">'+procent.toFixed(1)+'%</span>'+
+      '<span style="font-weight:800;color:#1e3a8a;">'+r[1].toFixed(2).replace('.',',')+' zł</span>'+
+    '</div>';
+  });
+
+  // Wg miesięcy (bar chart)
+  html+='<h3 style="font-family:\'Barlow Condensed\',sans-serif;color:#5b21b6;margin-top:14px;font-size:14px;letter-spacing:1px;text-transform:uppercase;">📅 Wg miesięcy</h3>';
+  var mscSort=Object.keys(poMsc).sort();
+  var maxMsc=Math.max.apply(null, mscSort.map(function(m){ return poMsc[m]; }));
+  mscSort.forEach(function(m){
+    var w=maxMsc>0?(poMsc[m]/maxMsc*100):0;
+    html+='<div style="margin-bottom:6px;">'+
+      '<div style="display:flex;justify-content:space-between;font-size:12px;color:#475569;margin-bottom:2px;"><span>'+formatujMiesiac(m)+'</span><span style="font-weight:800;color:#5b21b6;">'+poMsc[m].toFixed(2).replace('.',',')+' zł</span></div>'+
+      '<div style="background:#f1f5f9;height:14px;border-radius:4px;overflow:hidden;"><div style="background:linear-gradient(90deg,#7c3aed,#a78bfa);height:100%;width:'+w+'%;transition:width .3s;"></div></div>'+
+    '</div>';
+  });
+
+  cont.innerHTML=html;
+}
+
+function rysujPieChart(dane, suma){
+  var keys=Object.keys(dane).sort(function(a,b){ return dane[b]-dane[a]; });
+  if(!keys.length || suma<=0) return '<p style="color:#94a3b8;font-size:12px;">Brak danych do wykresu</p>';
+  var kolory=['#7c3aed','#3b82f6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16','#f97316','#8b5cf6','#14b8a6','#a855f7'];
+  var cx=110, cy=110, r=90;
+  var startAngle=-Math.PI/2;
+  var paths='';
+  keys.slice(0,12).forEach(function(k,i){
+    var v=dane[k];
+    var ang=v/suma*Math.PI*2;
+    var endAngle=startAngle+ang;
+    var x1=cx+r*Math.cos(startAngle), y1=cy+r*Math.sin(startAngle);
+    var x2=cx+r*Math.cos(endAngle), y2=cy+r*Math.sin(endAngle);
+    var largeArc=ang>Math.PI?1:0;
+    var d='M '+cx+' '+cy+' L '+x1.toFixed(2)+' '+y1.toFixed(2)+' A '+r+' '+r+' 0 '+largeArc+' 1 '+x2.toFixed(2)+' '+y2.toFixed(2)+' Z';
+    paths+='<path d="'+d+'" fill="'+kolory[i%kolory.length]+'" stroke="#fff" stroke-width="2"><title>'+k+': '+v.toFixed(2)+' zł</title></path>';
+    startAngle=endAngle;
+  });
+  return '<svg viewBox="0 0 220 220" style="width:100%;max-width:220px;display:block;margin:0 auto;">'+paths+'</svg>';
+}
+
+// ===== AUTO-PRZYPOMINANIE O BACKUPIE =====
+// Apka pamięta ts ostatniego eksportu. Przy starcie sprawdza ile dni minęło.
+// 7+ dni → pasek niebieski.  14+ dni → pasek czerwony "PILNE".
+// Ostatni backup zapisuje się tylko po SUDIE eksportu (nie po samym kliknięciu).
+
+var BACKUP_PROGI = { przypomnij_dni: 7, pilne_dni: 14 };
+
+function getOstatniBackup(){ return parseInt(lsGet('cysterna_fin_ostatni_backup')||'0'); }
+function setOstatniBackup(ts){ lsSet('cysterna_fin_ostatni_backup',String(ts)); }
+
+function dniOdOstatniegoBackupu(){
+  var ts=getOstatniBackup();
+  if(!ts) return null; // nigdy nie było backupu
+  var ms=Date.now()-ts;
+  return Math.floor(ms/(1000*60*60*24));
+}
+
+function liczbaTransakcji(){
+  return getTx().length;
+}
+
+function sprawdzCzyTrzebaBackup(){
+  // Pasek pojawia się TYLKO jeśli są jakieś transakcje (nie ma sensu backup pustki)
+  if(liczbaTransakcji()===0) return;
+  var dni=dniOdOstatniegoBackupu();
+  var bar=document.getElementById('backup-bar');
+  if(!bar) return;
+  if(dni===null){
+    // Nigdy nie robiony backup, ale są dane → pokaż łagodne przypomnienie
+    var n=liczbaTransakcji();
+    if(n>=3){
+      bar.classList.add('show');
+      bar.classList.remove('urgent');
+      bar.querySelector('b').textContent='🔔 PIERWSZY BACKUP FINANSÓW';
+      bar.querySelector('small').textContent='Masz '+n+' transakcji – kliknij aby pobrać plik backupu';
+    }
+    return;
+  }
+  if(dni>=BACKUP_PROGI.pilne_dni){
+    bar.classList.add('show','urgent');
+    bar.querySelector('b').textContent='🚨 PILNE: BACKUP FINANSÓW ('+dni+' dni temu)';
+    bar.querySelector('small').textContent='Kliknij aby pobrać plik – potem wyślij mailem do siebie';
+  } else if(dni>=BACKUP_PROGI.przypomnij_dni){
+    bar.classList.add('show');
+    bar.classList.remove('urgent');
+    bar.querySelector('b').textContent='🔔 PORA NA BACKUP FINANSÓW ('+dni+' dni temu)';
+    bar.querySelector('small').textContent='Kliknij aby pobrać plik – potem wyślij go mailem do siebie';
+  } else {
+    bar.classList.remove('show','urgent');
+  }
+}
+
+function zrobBackupTeraz(){
+  // Wywołanie z paska – po prostu odpalamy eksport (który ustawi datę po sukcesie)
+  finEksportJSON();
+}
+
+function renderujStatusBackupu(){
+  var box=document.getElementById('backup-status');
+  if(!box) return;
+  var dni=dniOdOstatniegoBackupu();
+  var n=liczbaTransakcji();
+  if(dni===null && n===0){
+    box.style.background='#f1f5f9'; box.style.color='#64748b';
+    box.innerHTML='Brak transakcji – po pierwszej apka zacznie pilnować backupu.';
+    return;
+  }
+  if(dni===null){
+    box.style.background='#fef3c7'; box.style.color='#92400e';
+    box.innerHTML='⚠️ Nigdy nie zrobiłeś backupu. Masz '+n+' transakcji do zabezpieczenia.';
+    return;
+  }
+  var data=new Date(getOstatniBackup());
+  var pad=function(x){ return String(x).padStart(2,'0'); };
+  var dataTxt=data.getFullYear()+'-'+pad(data.getMonth()+1)+'-'+pad(data.getDate())+' '+pad(data.getHours())+':'+pad(data.getMinutes());
+  if(dni>=BACKUP_PROGI.pilne_dni){
+    box.style.background='#fee2e2'; box.style.color='#991b1b';
+    box.innerHTML='🚨 Ostatni backup: <b>'+dataTxt+'</b> ('+dni+' dni temu) – PILNIE zaktualizuj';
+  } else if(dni>=BACKUP_PROGI.przypomnij_dni){
+    box.style.background='#fef3c7'; box.style.color='#92400e';
+    box.innerHTML='⚠️ Ostatni backup: <b>'+dataTxt+'</b> ('+dni+' dni temu) – pora na nowy';
+  } else {
+    box.style.background='#d1fae5'; box.style.color='#065f46';
+    box.innerHTML='✅ Ostatni backup: <b>'+dataTxt+'</b> ('+(dni===0?'dziś':dni+' dni temu')+') – wszystko OK';
+  }
+}
+
+// ===== EKSPORT / IMPORT =====
+function finEksportJSON(){
+  var dane={
+    eksportDate:new Date().toISOString(),
+    transakcje:getTx(),
+    budzety:getBudzety(),
+    kategorie:getKategorie(),
+    uczenie:getUczenie()
+  };
+  var json=JSON.stringify(dane,null,2);
+  var blob=new Blob([json],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='cysterna-finanse-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  // Zapisz datę ostatniego backupu
+  setOstatniBackup(Date.now());
+  sprawdzCzyTrzebaBackup();
+  renderujStatusBackupu();
+  // Krótkie potwierdzenie
+  setTimeout(function(){
+    alert('✅ Backup pobrany!\n\nSprawdź folder Pobrane na telefonie/komputerze.\nWyślij plik mailem do siebie albo wrzuć na Drive – będzie bezpieczny.');
+  },200);
+}
+
+function finEksportCSV(){
+  var tx=getTx();
+  if(!tx.length){ alert('Brak transakcji do eksportu.'); return; }
+  // BOM dla Excel + średnik jako separator (polski locale)
+  var csv='\uFEFF'+'Data;Dostawca;Opis;Kategoria;Pojazd;Brutto;Netto;VAT;Płatność\n';
+  tx.sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); }).forEach(function(t){
+    var row=[t.data||'',t.dostawca||'',t.opis||'',t.kategoria||'',t.pojazd||'',
+      (t.brutto||0).toFixed(2).replace('.',','),
+      (t.netto||0).toFixed(2).replace('.',','),
+      t.vat||'',t.platnosc||''];
+    csv+=row.map(function(v){
+      v=String(v).replace(/"/g,'""');
+      if(v.indexOf(';')!==-1||v.indexOf('"')!==-1||v.indexOf('\n')!==-1) v='"'+v+'"';
+      return v;
+    }).join(';')+'\n';
+  });
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='cysterna-transakcje-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function finImportJSON(){
+  var inp=document.getElementById('fin-import-input');
+  if(!inp.files || !inp.files[0]){ alert('Wybierz plik JSON do importu'); return; }
+  if(!confirm('⚠️ Import zastąpi obecne dane finansowe. Najpierw zrób eksport bieżących danych jako backup.\n\nKontynuować?')) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var d=JSON.parse(e.target.result);
+      if(!d || !Array.isArray(d.transakcje)){ alert('Plik nie wygląda na poprawny eksport.'); return; }
+      saveTx(d.transakcje);
+      if(d.budzety) saveBudzety(d.budzety);
+      if(d.kategorie) saveKategorie(d.kategorie);
+      if(d.uczenie) saveUczenie(d.uczenie);
+      wypelnijSelectyTx();
+      renderujTransakcje();
+      alert('✅ Zaimportowano: '+d.transakcje.length+' transakcji.');
+    } catch(err){
+      alert('Błąd odczytu pliku: '+err.message);
+    }
+  };
+  reader.readAsText(inp.files[0]);
+}
+
+function finResetuj(){
+  if(!confirm('⚠️ Usunie WSZYSTKIE dane finansowe (transakcje, budżety, pamięć kategoryzacji). Zrób najpierw eksport!\n\nKontynuować?')) return;
+  var kod=prompt('Wpisz dokładnie SKASUJ aby potwierdzić:');
+  if(kod!=='SKASUJ'){ alert('Anulowano.'); return; }
+  lsRemove('cysterna_fin_tx');
+  lsRemove('cysterna_fin_budzety');
+  lsRemove('cysterna_fin_kategorie');
+  lsRemove('cysterna_fin_uczenie');
+  wypelnijSelectyTx();
+  renderujTransakcje();
+  alert('Wszystkie dane finansowe skasowane.');
+}
+
+// ===== START =====
+document.addEventListener('DOMContentLoaded',function(){
+  try{ document.getElementById('data').valueAsDate=new Date(); }catch(e){}
+  try{ document.getElementById('zp-data').valueAsDate=new Date(); }catch(e){}
+  try{ document.getElementById('tx-data').valueAsDate=new Date(); }catch(e){}
+  try{ wypelnijSelectFloty(); }catch(e){ console.log('flota:',e); }
+  try{ renderFlote(); }catch(e){ console.log('flota render:',e); }
+  try{ wypelnijSelectyKierowcow(); }catch(e){ console.log('kierowcy:',e); }
+  try{ renderKierowcow(); }catch(e){ console.log('kierowcy render:',e); }
+  try{ wypelnijSelectyTx(); }catch(e){ console.log('finanse selecty:',e); }
+  try{ sprawdzCzyTrzebaBackup(); }catch(e){ console.log('backup check:',e); }
+  try{ dodajProdukt(); }catch(e){ console.log('err:',e); }
+  try{ renderMail(); }catch(e){ console.log('err:',e); }
+  try{ sprawdzRoboczy(); }catch(e){}
+});
+</script>
+</body>
+</html>
