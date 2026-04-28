@@ -163,14 +163,14 @@ input[type=file]{display:none;}
     <input type="text" id="naftobaza-inna" placeholder="Wpisz nazwę naftobazy..." style="margin-top:8px;display:none;" oninput="zapiszRoboczy()">
 
     <div class="row2" style="margin-top:14px;">
-      <div><label style="margin-top:0">Km start *</label><input type="number" id="kms" placeholder="0" inputmode="numeric" oninput="obliczSpalanie();zapiszRoboczy()"></div>
-      <div><label style="margin-top:0">Km koniec *</label><input type="number" id="kmk" placeholder="0" inputmode="numeric" oninput="obliczSpalanie();zapiszRoboczy()"></div>
+      <div><label style="margin-top:0">Km start *</label><input type="text" id="kms" placeholder="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off" oninput="obliczSpalanie();zapiszRoboczy()"></div>
+      <div><label style="margin-top:0">Km koniec *</label><input type="text" id="kmk" placeholder="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off" oninput="obliczSpalanie();zapiszRoboczy()"></div>
     </div>
 
     <div class="card" style="border-left:4px solid #f59e0b;">
       <div class="card-title">⛽ Tankowanie pojazdu</div>
       <label style="margin-top:0">Zatankowano (litry)</label>
-      <input type="number" id="tank-litry" placeholder="0.00" inputmode="decimal" oninput="obliczSpalanie();zapiszRoboczy()">
+      <input type="text" id="tank-litry" placeholder="0.00" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="obliczSpalanie();zapiszRoboczy()">
       <p style="font-size:11px;color:#64748b;margin-top:4px;">💡 Spalanie liczy się automatycznie z różnicy Km start ↔ Km koniec</p>
       <div id="spalanie-wynik" style="display:none;" class="stat-box">
         <div class="stat-lab">Spalanie</div>
@@ -255,13 +255,13 @@ input[type=file]{display:none;}
     </select>
     <input type="text" id="edit-naftobaza-inna" placeholder="Wpisz nazwę naftobazy..." style="margin-top:8px;display:none;">
     <div class="row2" style="margin-top:14px;">
-      <div><label style="margin-top:0">Km start</label><input type="number" id="edit-kms" inputmode="numeric"></div>
-      <div><label style="margin-top:0">Km koniec</label><input type="number" id="edit-kmk" inputmode="numeric"></div>
+      <div><label style="margin-top:0">Km start</label><input type="text" id="edit-kms" inputmode="numeric" pattern="[0-9]*" autocomplete="off"></div>
+      <div><label style="margin-top:0">Km koniec</label><input type="text" id="edit-kmk" inputmode="numeric" pattern="[0-9]*" autocomplete="off"></div>
     </div>
     <div style="margin-top:14px;">
       <div class="card-title" style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;color:#1e3a8a;text-transform:uppercase;border-bottom:2px solid #e2e8f0;padding-bottom:6px;margin-bottom:10px;">⛽ Tankowanie</div>
       <div class="row2">
-        <div><label style="margin-top:0">Litry</label><input type="number" id="edit-tank-litry" inputmode="decimal"></div>
+        <div><label style="margin-top:0">Litry</label><input type="text" id="edit-tank-litry" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off"></div>
       </div>
     </div>
     <div id="edit-produkty-box" style="margin-top:14px;"></div>
@@ -902,9 +902,16 @@ function renderHistoria(){
     }
     var prods=(h.produkty||[]).map(function(p){
       var statusKolor='#475569';
-      if(p.status==='PONAD NORMĘ'||p.status==='DUŻY UBYTEK'||p.status==='DO WYJAŚNIENIA') statusKolor='#b91c1c';
-      else if(p.status==='OK – W NORMIE'||p.status==='OK – BEZ UBYTKÓW'||p.status==='OSZCZĘDNOŚĆ') statusKolor='#15803d';
-      var line='<div style="font-size:12px;color:'+statusKolor+';margin-top:4px;">'+p.paliwo+(p.grawitacja?' GRAW':'')+': zał.'+p.zaladunek_RZ+'L | roz.'+p.rozlane_RZ+'L | <b>'+p.status+'</b></div>';
+      // Maskowanie: kierowca nie widzi że to nadwyżka. Wyświetlamy "OK – W NORMIE"
+      // niezależnie od tego czy w arkuszu jest "OSZCZĘDNOŚĆ – KORZYŚĆ DLA BIURA".
+      // Biuro w panelu index.html ma swoją własną historię z prawdziwymi statusami.
+      var statusWyswietlany = p.status;
+      if(p.nadwyzka || p.status==='OSZCZĘDNOŚĆ – KORZYŚĆ DLA BIURA'){
+        statusWyswietlany = 'OK – W NORMIE';
+      }
+      if(statusWyswietlany==='PONAD NORMĘ'||statusWyswietlany==='DUŻY UBYTEK'||statusWyswietlany==='DO WYJAŚNIENIA') statusKolor='#b91c1c';
+      else if(statusWyswietlany==='OK – W NORMIE'||statusWyswietlany==='OK – BEZ UBYTKÓW'||statusWyswietlany==='OSZCZĘDNOŚĆ') statusKolor='#15803d';
+      var line='<div style="font-size:12px;color:'+statusKolor+';margin-top:4px;">'+p.paliwo+(p.grawitacja?' GRAW':'')+': zał.'+p.zaladunek_RZ+'L | roz.'+p.rozlane_RZ+'L | <b>'+statusWyswietlany+'</b></div>';
       if(p.powodUbytku) line+='<div style="font-size:11px;color:#7c2d12;margin-left:10px;font-style:italic;">↳ powód: '+p.powodUbytku+'</div>';
       return line;
     }).join('');
@@ -1006,9 +1013,9 @@ function otworzEdycje(idx){
     var sec=document.createElement('div'); sec.className='card'; sec.style.borderLeft='4px solid #2563eb'; sec.style.marginTop='12px';
     sec.innerHTML='<div class="card-title">PRODUKT '+(pi+1)+'</div>'+
       '<div class="row2"><div><label style="margin-top:0">Paliwo</label><select id="ep-pal-'+pi+'"><option value="ON"'+(p.paliwo==='ON'?' selected':'')+'>ON</option><option value="PB"'+(p.paliwo==='PB'?' selected':'')+'>PB95</option><option value="OP"'+(p.paliwo==='OP'?' selected':'')+'>Olej opałowy</option></select></div>'+
-      '<div><label style="margin-top:0">Program</label><input type="number" id="ep-prog-'+pi+'" value="'+(p.program||'')+'"></div></div>'+
-      '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Zał. RZ</label><input type="number" id="ep-zrz-'+pi+'" value="'+(p.zaladunek_RZ||0)+'"></div><div><label style="margin-top:0">Zał. 15°C</label><input type="number" id="ep-z15-'+pi+'" value="'+(p.zaladunek_15||0)+'"></div></div>'+
-      '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Roz. RZ</label><input type="number" id="ep-rrz-'+pi+'" value="'+(p.rozlane_RZ||0)+'"></div><div><label style="margin-top:0">Roz. 15°C</label><input type="number" id="ep-r15-'+pi+'" value="'+(p.rozlane_15||0)+'"></div></div>';
+      '<div><label style="margin-top:0">Program</label><input type="text" id="ep-prog-'+pi+'" inputmode="numeric" pattern="[0-9]*" value="'+(p.program||'')+'"></div></div>'+
+      '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Zał. RZ</label><input type="text" id="ep-zrz-'+pi+'" inputmode="decimal" pattern="[0-9.,]*" value="'+(p.zaladunek_RZ||0)+'"></div><div><label style="margin-top:0">Zał. 15°C</label><input type="text" id="ep-z15-'+pi+'" inputmode="decimal" pattern="[0-9.,]*" value="'+(p.zaladunek_15||0)+'"></div></div>'+
+      '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Roz. RZ</label><input type="text" id="ep-rrz-'+pi+'" inputmode="decimal" pattern="[0-9.,]*" value="'+(p.rozlane_RZ||0)+'"></div><div><label style="margin-top:0">Roz. 15°C</label><input type="text" id="ep-r15-'+pi+'" inputmode="decimal" pattern="[0-9.,]*" value="'+(p.rozlane_15||0)+'"></div></div>';
     pb.appendChild(sec);
   });
   document.getElementById('edit-modal').style.display='flex';
@@ -1047,9 +1054,9 @@ function zapiszEdycje(){
   var oryginalTs = oryg.koryguje_ts || oryg.ts; // gdy korekta korekty, wskazujemy na pierwowzór
   var poprzedniaWersja = oryg.wersja || 1;
 
-  var kms=parseFloat(document.getElementById('edit-kms').value)||0;
-  var kmk=parseFloat(document.getElementById('edit-kmk').value)||0;
-  var tankL=parseFloat(document.getElementById('edit-tank-litry').value)||0;
+  var kms=parseLiczba(valOf('edit-kms'))||0;
+  var kmk=parseLiczba(valOf('edit-kmk'))||0;
+  var tankL=parseLiczba(valOf('edit-tank-litry'))||0;
   var dystans=(kms>0&&kmk>kms)?(kmk-kms):0;
   var produkty=(oryg.produkty||[]).map(function(p,pi){
     var palEl=document.getElementById('ep-pal-'+pi);
@@ -1060,10 +1067,10 @@ function zapiszEdycje(){
     var r15El=document.getElementById('ep-r15-'+pi);
     var pal=palEl?palEl.value:p.paliwo;
     var prog=parseInt(progEl?progEl.value:p.program);
-    var zRZ=parseFloat(zrzEl?zrzEl.value:p.zaladunek_RZ)||0;
-    var z15=parseFloat(z15El?z15El.value:p.zaladunek_15)||0;
-    var rRZ=parseFloat(rrzEl?rrzEl.value:p.rozlane_RZ)||0;
-    var r15=parseFloat(r15El?r15El.value:p.rozlane_15)||0;
+    var zRZ=parseLiczba(zrzEl?zrzEl.value:p.zaladunek_RZ)||0;
+    var z15=parseLiczba(z15El?z15El.value:p.zaladunek_15)||0;
+    var rRZ=parseLiczba(rrzEl?rrzEl.value:p.rozlane_RZ)||0;
+    var r15=parseLiczba(r15El?r15El.value:p.rozlane_15)||0;
     var pd=getProgData(pal,prog);
     var wsp=pd?pd.wsp/100:0;
     var typ=pd?pd.typ:p.typProg;
@@ -1160,9 +1167,9 @@ function liczAktywneProdukty(){
 }
 
 function obliczSpalanie(){
-  var litry=parseFloat(document.getElementById('tank-litry').value);
-  var kms=parseFloat(document.getElementById('kms').value);
-  var kmk=parseFloat(document.getElementById('kmk').value);
+  var litry=parseLiczba(valOf('tank-litry'));
+  var kms=parseLiczba(valOf('kms'));
+  var kmk=parseLiczba(valOf('kmk'));
   var wynik=document.getElementById('spalanie-wynik');
   var dystans=(kms>0&&kmk>0&&kmk>kms)?(kmk-kms):0;
   if(dystans>0&&litry>0){
@@ -1178,17 +1185,22 @@ function dodajProdukt(){
   var div=document.createElement('div'); div.className='card'; div.id='produkt-'+id; div.style.borderLeft='4px solid #2563eb';
   // Dodajemy też data-attribute z rosnącym ID, żeby łatwo identyfikować
   div.setAttribute('data-pid', id);
+  // FIX iPhone/iOS: type="text" zamiast type="number". Wcześniejsze type="number"
+  // powodowało, że gdy kierowca wpisał wartość z PRZECINKIEM (np. 2456,78 — naturalne
+  // dla polskich klawiatur), .value zwracało PUSTY STRING — walidacja widziała pole
+  // jako puste i komunikowała "Produkt 1: załadunek RZ" mimo że pole było wypełnione.
+  // inputmode="decimal" + pattern wymusza klawiaturę numeryczną na iOS.
   div.innerHTML='<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;"><span class="prod-label">PRODUKT '+nrWyswietlany+'</span>'+
     '<button class="btn-remove" onclick="usunProdukt('+id+')">✕ Usuń</button>'+
     '</div><label style="margin-top:0">Rodzaj paliwa *</label>'+
     '<select id="pal-'+id+'" onchange="renderProgramy('+id+');zapiszRoboczy()"><option value="">– wybierz –</option><option value="ON">ON – Olej napędowy</option><option value="PB">PB95 – Benzyna</option><option value="OP">Olej opałowy</option></select>'+
     '<label>Program rozlewania *</label><div class="prog-grid" id="progi-'+id+'"><p style="color:#94a3b8;font-size:13px;grid-column:1/-1;">Najpierw wybierz paliwo</p></div>'+
     '<div class="section-bg"><div class="section-label" style="color:#2563eb;">📋 Załadunek (z WZ)</div>'+
-    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="zal-rz-'+id+'" placeholder="0" inputmode="decimal" step="any" oninput="zapiszRoboczy()"></div>'+
-    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="zal-15-'+id+'" placeholder="0" inputmode="decimal" step="any" oninput="zapiszRoboczy()"></div></div></div>'+
+    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="text" id="zal-rz-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="text" id="zal-15-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div></div></div>'+
     '<div class="section-bg" style="border-color:#fed7aa;"><div class="section-label" style="color:#ea580c;">🔧 Rozlane u klientów</div>'+
-    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="roz-rz-'+id+'" placeholder="0" inputmode="decimal" step="any" oninput="zapiszRoboczy()"></div>'+
-    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="roz-15-'+id+'" placeholder="0" inputmode="decimal" step="any" oninput="zapiszRoboczy()"></div></div></div>';
+    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="text" id="roz-rz-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="text" id="roz-15-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div></div></div>';
   document.getElementById('produkty').appendChild(div);
   odswiezNumeryProduktow();
   if(liczAktywneProdukty()>=3) document.getElementById('btn-dodaj').style.display='none';
@@ -1249,6 +1261,21 @@ function getProgData(palKey,nr){
 // Helper: bezpiecznie pobiera wartość pola (zwraca '' jeśli element nie istnieje)
 function valOf(id){ var el=document.getElementById(id); return el?(el.value||''):''; }
 
+// FIX iPhone: parsuje liczbę uznając przecinek jako separator dziesiętny.
+// Polskie klawiatury domyślnie wpisują przecinek - "2 456,78" musi być traktowane jako 2456.78.
+// Zwraca NaN dla pustych/nieprawidłowych wartości.
+function parseLiczba(v){
+  if(v===null||v===undefined) return NaN;
+  var s=String(v).trim();
+  if(!s) return NaN;
+  // usuwamy spacje (niełamliwe i zwykłe) i normalizujemy przecinek
+  s=s.replace(/[\s\u00a0]/g,'').replace(',','.');
+  var n=parseFloat(s);
+  return isNaN(n)?NaN:n;
+}
+// Sprawdza czy pole zawiera niepustą sensowną liczbę (string, nie tylko whitespace)
+function maWartosc(id){ return valOf(id).replace(/[\s\u00a0]/g,'')!==''; }
+
 function waliduj(){
   var bledy=[];
   if(!valOf('kierowca')) bledy.push('Kierowca nie wybrany');
@@ -1261,7 +1288,7 @@ function waliduj(){
   var kms=valOf('kms'), kmk=valOf('kmk');
   if(!kms) bledy.push('Km start');
   if(!kmk) bledy.push('Km koniec');
-  if(kms&&kmk&&parseFloat(kmk)<parseFloat(kms)) bledy.push('Km koniec musi być większy niż start');
+  if(kms&&kmk&&parseLiczba(kmk)<parseLiczba(kms)) bledy.push('Km koniec musi być większy niż start');
   var ids=Object.keys(selectedProgs);
   var aktywne=ids.filter(function(id){ return document.getElementById('produkt-'+id); });
   if(!aktywne.length) bledy.push('Dodaj przynajmniej jeden produkt');
@@ -1272,21 +1299,27 @@ function waliduj(){
     var nr=idx+1;
     if(!valOf('pal-'+id)) bledy.push('Produkt '+nr+': rodzaj paliwa');
     if(!selectedProgs[id]) bledy.push('Produkt '+nr+': program rozlewania');
-    if(!valOf('zal-rz-'+id)) bledy.push('Produkt '+nr+': załadunek RZ');
-    if(!valOf('zal-15-'+id)) bledy.push('Produkt '+nr+': załadunek 15°C');
-    if(!valOf('roz-rz-'+id)) bledy.push('Produkt '+nr+': rozlane u klientów RZ');
-    if(!valOf('roz-15-'+id)) bledy.push('Produkt '+nr+': rozlane u klientów 15°C');
+    if(!maWartosc('zal-rz-'+id)) bledy.push('Produkt '+nr+': załadunek RZ');
+    if(!maWartosc('zal-15-'+id)) bledy.push('Produkt '+nr+': załadunek 15°C');
+    if(!maWartosc('roz-rz-'+id)) bledy.push('Produkt '+nr+': rozlane u klientów RZ');
+    if(!maWartosc('roz-15-'+id)) bledy.push('Produkt '+nr+': rozlane u klientów 15°C');
     // Sanity checks – kompletne dane wymagane
-    var zRZ=parseFloat(valOf('zal-rz-'+id));
-    var z15=parseFloat(valOf('zal-15-'+id));
-    var rRZ=parseFloat(valOf('roz-rz-'+id));
-    var r15=parseFloat(valOf('roz-15-'+id));
+    var zRZ=parseLiczba(valOf('zal-rz-'+id));
+    var z15=parseLiczba(valOf('zal-15-'+id));
+    var rRZ=parseLiczba(valOf('roz-rz-'+id));
+    var r15=parseLiczba(valOf('roz-15-'+id));
+    // Sprawdź czy wpisane wartości w ogóle dały się sparsować
+    if(maWartosc('zal-rz-'+id) && isNaN(zRZ)) bledy.push('Produkt '+nr+': załadunek RZ – błędny format (użyj liczb i kropki/przecinka)');
+    if(maWartosc('zal-15-'+id) && isNaN(z15)) bledy.push('Produkt '+nr+': załadunek 15°C – błędny format');
+    if(maWartosc('roz-rz-'+id) && isNaN(rRZ)) bledy.push('Produkt '+nr+': rozlane RZ – błędny format');
+    if(maWartosc('roz-15-'+id) && isNaN(r15)) bledy.push('Produkt '+nr+': rozlane 15°C – błędny format');
     if(!isNaN(zRZ)&&zRZ<=0) bledy.push('Produkt '+nr+': załadunek RZ musi być większy niż 0');
     if(!isNaN(z15)&&z15<=0) bledy.push('Produkt '+nr+': załadunek 15°C musi być większy niż 0');
     if(!isNaN(rRZ)&&rRZ<0) bledy.push('Produkt '+nr+': rozlane RZ nie może być ujemne');
     if(!isNaN(r15)&&r15<0) bledy.push('Produkt '+nr+': rozlane 15°C nie może być ujemne');
-    if(!isNaN(zRZ)&&!isNaN(rRZ)&&rRZ>zRZ) bledy.push('Produkt '+nr+': rozlane RZ ('+rRZ+') > załadunek RZ ('+zRZ+') – niemożliwe');
-    if(!isNaN(z15)&&!isNaN(r15)&&r15>z15) bledy.push('Produkt '+nr+': rozlane 15°C ('+r15+') > załadunek 15°C ('+z15+') – niemożliwe');
+    // UWAGA: rozlane > załadunek NIE jest błędem - dla niektórych programów
+    // jest to normalna sytuacja (różne metody pomiaru/temperatury). Taka różnica
+    // jest oznaczana jako oszczędność/nadwyżka, traktowana jako korzyść dla biura.
   });
   return bledy;
 }
@@ -1303,8 +1336,8 @@ function sprawdzUbytkiKrytyczne(){
     var pd=getProgData(pal,prog);
     if(!pd) return;
     var typ=pd.typ;
-    var zalU=typ==='15'?parseFloat(document.getElementById('zal-15-'+id).value):parseFloat(document.getElementById('zal-rz-'+id).value);
-    var rozU=typ==='15'?parseFloat(document.getElementById('roz-15-'+id).value):parseFloat(document.getElementById('roz-rz-'+id).value);
+    var zalU=typ==='15'?parseLiczba(valOf('zal-15-'+id)):parseLiczba(valOf('zal-rz-'+id));
+    var rozU=typ==='15'?parseLiczba(valOf('roz-15-'+id)):parseLiczba(valOf('roz-rz-'+id));
     if(isNaN(zalU)||isNaN(rozU)||zalU<=0) return;
     var ubytek=zalU-rozU;
     var procent=ubytek/zalU*100;
@@ -1331,21 +1364,21 @@ function zbudujPayload(powodyUbytkow){
   var data=document.getElementById('data').value;
   var wz=document.getElementById('wz').value.trim();
   var naftobaza=pobierzNaftobaze();
-  var kms=parseFloat(document.getElementById('kms').value);
-  var kmk=parseFloat(document.getElementById('kmk').value);
-  var km=kmk-kms;
+  var kms=parseLiczba(valOf('kms'));
+  var kmk=parseLiczba(valOf('kmk'));
+  var km=(!isNaN(kms)&&!isNaN(kmk))?kmk-kms:0;
   var produktyData=[];
   var ids=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
   // Sortujemy po ID rosnąco — to gwarantuje, że kolejność produktów w arkuszu odpowiada
   // kolejności dodawania ich przez kierowcę.
   ids.sort(function(a,b){ return parseInt(a)-parseInt(b); });
   ids.forEach(function(id){
-    var pal=document.getElementById('pal-'+id).value;
+    var pal=valOf('pal-'+id);
     var prog=selectedProgs[id];
-    var zalRZ=parseFloat(document.getElementById('zal-rz-'+id).value)||0;
-    var zal15=parseFloat(document.getElementById('zal-15-'+id).value)||0;
-    var rozRZ=parseFloat(document.getElementById('roz-rz-'+id).value)||0;
-    var roz15=parseFloat(document.getElementById('roz-15-'+id).value)||0;
+    var zalRZ=parseLiczba(valOf('zal-rz-'+id))||0;
+    var zal15=parseLiczba(valOf('zal-15-'+id))||0;
+    var rozRZ=parseLiczba(valOf('roz-rz-'+id))||0;
+    var roz15=parseLiczba(valOf('roz-15-'+id))||0;
     var pd=getProgData(pal,prog);
     var wsp=pd?pd.wsp/100:0;
     var typ=pd?pd.typ:'RZ';
@@ -1355,17 +1388,25 @@ function zbudujPayload(powodyUbytkow){
     var norma=+(zalU*wsp).toFixed(2);
     var roznica=+(zalU-rozU).toFixed(2);
     var rozNetto=+(roznica-norma).toFixed(2);
-    // Status uwzględniający grawitację
+    // FIX: nadwyżka = rozlane > załadunek. Dla niektórych programów
+    // to normalna sytuacja (różne metody pomiaru/temperatury) i traktujemy
+    // jako KORZYŚĆ DLA BIURA - nie jako błąd.
+    // Sprawdzamy w tym samym typie pomiaru (RZ vs 15°C) który jest istotny dla programu.
+    var nadwyzka = (!isNaN(zalU) && !isNaN(rozU) && rozU > zalU);
+    var nadwyzkaIle = nadwyzka ? +(rozU-zalU).toFixed(2) : 0;
+    // Status uwzględniający grawitację i nadwyżkę
     var status;
-    if(grawitacja){
+    if(nadwyzka){
+      status = 'OSZCZĘDNOŚĆ – KORZYŚĆ DLA BIURA';
+    } else if(grawitacja){
       status = rozNetto<=0 ? 'OK – BEZ UBYTKÓW' : 'DO WYJAŚNIENIA';
     } else {
       status = rozNetto<0?'OSZCZĘDNOŚĆ':rozNetto<=10?'OK – W NORMIE':rozNetto<=50?'PONAD NORMĘ':'DUŻY UBYTEK';
     }
     var powodUbytku = powodyUbytkow && powodyUbytkow[id] ? powodyUbytkow[id] : '';
-    produktyData.push({nrProduktu:produktyData.length+1,paliwo:pal,program:prog,typProg:typ,grawitacja:grawitacja,zaladunek_RZ:zalRZ,zaladunek_15:zal15,rozlane_RZ:rozRZ,rozlane_15:roz15,normaUbytek:norma,roznica:roznica,roznicaNetto:rozNetto,status:status,powodUbytku:powodUbytku});
+    produktyData.push({nrProduktu:produktyData.length+1,paliwo:pal,program:prog,typProg:typ,grawitacja:grawitacja,zaladunek_RZ:zalRZ,zaladunek_15:zal15,rozlane_RZ:rozRZ,rozlane_15:roz15,normaUbytek:norma,roznica:roznica,roznicaNetto:rozNetto,status:status,powodUbytku:powodUbytku,nadwyzka:nadwyzka,nadwyzkaIle:nadwyzkaIle});
   });
-  var tankLitry=parseFloat(document.getElementById('tank-litry').value)||0;
+  var tankLitry=parseLiczba(valOf('tank-litry'))||0;
   var dystans=(kms>0&&kmk>kms)?(kmk-kms):0;
   var spalanie=tankLitry>0&&dystans>0?+(tankLitry/dystans*100).toFixed(2):null;
   var ts=Date.now();
@@ -1396,6 +1437,9 @@ function wyslij(){
   }
   valBox.style.display='none';
 
+  // Nadwyżki (rozlane > załadunek) są wykrywane i oznaczane w payloadzie do arkusza,
+  // ale kierowca nie dostaje o tym żadnej informacji - to widoczne tylko dla biura w panelu.
+
   // Sprawdź ubytki krytyczne – jeśli są, pokaż modal z polami "powód"
   var ostrzezenia=sprawdzUbytkiKrytyczne();
   if(ostrzezenia.length){
@@ -1405,6 +1449,10 @@ function wyslij(){
   // Brak ostrzeżeń – wysyłka bezpośrednia
   wyslijFinalnie(zbudujPayload({}));
 }
+
+// (sprawdzNadwyzki była używana wcześniej do informowania kierowcy o nadwyżkach.
+// Usunięta - nadwyżki są obsługiwane bezpośrednio w zbudujPayload przez pole
+// `nadwyzka:true`, widoczne tylko dla biura w panelu.)
 
 function pokazUbytekModal(ostrzezenia){
   var lista=document.getElementById('ubytek-lista');
