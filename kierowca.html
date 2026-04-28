@@ -600,6 +600,25 @@ function pobierzNaftobazeEdit(){
 // ===== AUTOSAVE ROBOCZY =====
 function zapiszRoboczy(){
   try{
+    // Zbierz dane wszystkich aktywnych produktów (zał. RZ, zał. 15, roz. RZ, roz. 15, paliwo, program)
+    var produktyDraft=[];
+    var ids=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
+    ids.sort(function(a,b){ return parseInt(a)-parseInt(b); });
+    ids.forEach(function(id){
+      var pal=document.getElementById('pal-'+id);
+      var zrz=document.getElementById('zal-rz-'+id);
+      var z15=document.getElementById('zal-15-'+id);
+      var rrz=document.getElementById('roz-rz-'+id);
+      var r15=document.getElementById('roz-15-'+id);
+      produktyDraft.push({
+        paliwo: pal?pal.value:'',
+        program: selectedProgs[id]||null,
+        zalRZ: zrz?zrz.value:'',
+        zal15: z15?z15.value:'',
+        rozRZ: rrz?rrz.value:'',
+        roz15: r15?r15.value:''
+      });
+    });
     var d={
       kierowca:document.getElementById('kierowca').value,
       ciagnik:document.getElementById('ciagnik').value,
@@ -610,9 +629,15 @@ function zapiszRoboczy(){
       naftobazaInna:document.getElementById('naftobaza-inna').value,
       kms:document.getElementById('kms').value,
       kmk:document.getElementById('kmk').value,
-      tankLitry:document.getElementById('tank-litry').value
+      tankLitry:document.getElementById('tank-litry').value,
+      produkty:produktyDraft,
+      _ts:Date.now()
     };
-    if(d.kierowca||d.ciagnik||d.wz||d.kms){
+    // Zapisuj jeśli cokolwiek istotnego jest wpisane
+    var hasProductData=produktyDraft.some(function(p){
+      return p.paliwo||p.program||p.zalRZ||p.zal15||p.rozRZ||p.roz15;
+    });
+    if(d.kierowca||d.ciagnik||d.wz||d.kms||d.kmk||hasProductData){
       lsSet('cysterna_roboczy',JSON.stringify(d));
       document.getElementById('draft-bar').classList.add('show');
     }
@@ -621,7 +646,7 @@ function zapiszRoboczy(){
 function wczytajRoboczy(){
   try{
     var d=JSON.parse(lsGet('cysterna_roboczy')||'{}');
-    if(!d.kierowca) return;
+    if(!d.kierowca && !(d.produkty&&d.produkty.length)) return;
     document.getElementById('kierowca').value=d.kierowca||'';
     document.getElementById('ciagnik').value=d.ciagnik||'';
     document.getElementById('naczepa').value=d.naczepa||'';
@@ -641,14 +666,40 @@ function wczytajRoboczy(){
     document.getElementById('kmk').value=d.kmk||'';
     document.getElementById('tank-litry').value=d.tankLitry||'';
     obliczSpalanie();
+    // Wczytaj zapisane produkty (załadunek/rozładunek). To naprawia
+    // utratę danych przy odświeżeniu strony kiedy sieć padła.
+    if(d.produkty && d.produkty.length){
+      // Wyczyść aktualne karty produktów i utwórz nowe na podstawie draftu
+      document.getElementById('produkty').innerHTML='';
+      selectedProgs={};
+      d.produkty.forEach(function(p){
+        dodajProdukt();
+        // Po dodaniu zapamiętujemy ostatnio użyte ID (= produktSeq)
+        var id=produktSeq;
+        if(p.paliwo){
+          var palEl=document.getElementById('pal-'+id);
+          if(palEl){ palEl.value=p.paliwo; renderProgramy(id); }
+        }
+        if(p.program){ selProg(id, p.program); }
+        var zrz=document.getElementById('zal-rz-'+id); if(zrz) zrz.value=p.zalRZ||'';
+        var z15=document.getElementById('zal-15-'+id); if(z15) z15.value=p.zal15||'';
+        var rrz=document.getElementById('roz-rz-'+id); if(rrz) rrz.value=p.rozRZ||'';
+        var r15=document.getElementById('roz-15-'+id); if(r15) r15.value=p.roz15||'';
+      });
+    }
     document.getElementById('draft-bar').classList.remove('show');
-    alert('✅ Wczytano zapisany wpis!');
-  }catch(e){}
+    alert('✅ Wczytano zapisany wpis (włącznie z produktami).');
+  }catch(e){ alert('⚠️ Nie udało się wczytać draftu: '+e.message); }
 }
 function sprawdzRoboczy(){
   try{
     var d=JSON.parse(lsGet('cysterna_roboczy')||'{}');
-    if(d.kierowca) document.getElementById('draft-bar').classList.add('show');
+    var maProdukty = d.produkty && d.produkty.length && d.produkty.some(function(p){
+      return p.zalRZ||p.zal15||p.rozRZ||p.roz15||p.paliwo||p.program;
+    });
+    if(d.kierowca || d.wz || d.kms || d.kmk || maProdukty){
+      document.getElementById('draft-bar').classList.add('show');
+    }
   }catch(e){}
 }
 
@@ -690,19 +741,34 @@ function safeFetch(payload){
   });
 }
 
+// FIX: flaga zapobiegająca równoczesnym wywołaniom wyslijOczekujace
+var _wysylkaTrwa=false;
 function wyslijOczekujace(){
+  if(_wysylkaTrwa) return;
   var oczekujace=getOczekujace();
   if(!oczekujace.length) return;
-  var pozostale=[];
+  _wysylkaTrwa=true;
+  var snapshot=oczekujace.slice();   // kopia do iteracji
+  var statusy={};                     // ts -> 'ok' | 'err'
   var doneCount=0;
-  oczekujace.forEach(function(p){
+  snapshot.forEach(function(p){
     safeFetch(p).then(function(){
       var hist=getHistoria();
       hist.forEach(function(h){ if(h.ts===p.ts) h.wyslane=true; });
       saveHistoria(hist);
-    }).catch(function(){ pozostale.push(p); }).then(function(){
+      statusy[p.ts]='ok';
+    }).catch(function(){
+      statusy[p.ts]='err';
+    }).then(function(){
       doneCount++;
-      if(doneCount===oczekujace.length) saveOczekujace(pozostale);
+      if(doneCount===snapshot.length){
+        // Bierzemy AKTUALNĄ kolejkę (mogła się zmienić w trakcie wysyłki)
+        // i usuwamy z niej tylko te, które się powiodły.
+        var aktualna=getOczekujace();
+        var nowa=aktualna.filter(function(x){ return statusy[x.ts]!=='ok'; });
+        saveOczekujace(nowa);
+        _wysylkaTrwa=false;
+      }
     });
   });
 }
@@ -1079,7 +1145,19 @@ var PROGRAMY={
   PB:[{nr:17,typ:'RZ',wsp:2},{nr:18,typ:'15',wsp:2},{nr:99,typ:'RZ',wsp:0,grawitacja:true}],
   OP:[{nr:21,typ:'RZ',wsp:2},{nr:22,typ:'15',wsp:2}]
 };
-var produktCount=0, selectedProgs={};
+// FIX: produktCount musi być zawsze rosnący (UID), bo był używany jako element ID w DOM.
+// Stary kod robił produktCount-- przy usunięciu, co powodowało kolizje ID (dwa elementy
+// z id="produkt-2" jednocześnie) i błędy walidacji typu "Produkt X: załadunek RZ"
+// mimo wypełnionych pól. To był klasyczny stale-DOM bug.
+var produktSeq=0;            // sekwencja - tylko rośnie, daje unikalne ID
+var selectedProgs={};        // {id -> nr programu}
+
+// Liczy produkty aktualnie obecne w DOM (zastępuje stary produktCount)
+function liczAktywneProdukty(){
+  var box=document.getElementById('produkty');
+  if(!box) return 0;
+  return box.querySelectorAll('.card[id^="produkt-"]').length;
+}
 
 function obliczSpalanie(){
   var litry=parseFloat(document.getElementById('tank-litry').value);
@@ -1094,28 +1172,44 @@ function obliczSpalanie(){
 }
 
 function dodajProdukt(){
-  if(produktCount>=3){ alert('Maksymalnie 3 produkty!'); return; }
-  produktCount++; var id=produktCount; selectedProgs[id]=null;
+  if(liczAktywneProdukty()>=3){ alert('Maksymalnie 3 produkty!'); return; }
+  produktSeq++; var id=produktSeq; selectedProgs[id]=null;
+  var nrWyswietlany=liczAktywneProdukty()+1; // numer porządkowy widoczny dla użytkownika (1,2,3)
   var div=document.createElement('div'); div.className='card'; div.id='produkt-'+id; div.style.borderLeft='4px solid #2563eb';
-  div.innerHTML='<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">PRODUKT '+id+
-    (id>1?'<button class="btn-remove" onclick="usunProdukt('+id+')">✕ Usuń</button>':'')+
+  // Dodajemy też data-attribute z rosnącym ID, żeby łatwo identyfikować
+  div.setAttribute('data-pid', id);
+  div.innerHTML='<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;"><span class="prod-label">PRODUKT '+nrWyswietlany+'</span>'+
+    '<button class="btn-remove" onclick="usunProdukt('+id+')">✕ Usuń</button>'+
     '</div><label style="margin-top:0">Rodzaj paliwa *</label>'+
-    '<select id="pal-'+id+'" onchange="renderProgramy('+id+')"><option value="">– wybierz –</option><option value="ON">ON – Olej napędowy</option><option value="PB">PB95 – Benzyna</option><option value="OP">Olej opałowy</option></select>'+
+    '<select id="pal-'+id+'" onchange="renderProgramy('+id+');zapiszRoboczy()"><option value="">– wybierz –</option><option value="ON">ON – Olej napędowy</option><option value="PB">PB95 – Benzyna</option><option value="OP">Olej opałowy</option></select>'+
     '<label>Program rozlewania *</label><div class="prog-grid" id="progi-'+id+'"><p style="color:#94a3b8;font-size:13px;grid-column:1/-1;">Najpierw wybierz paliwo</p></div>'+
     '<div class="section-bg"><div class="section-label" style="color:#2563eb;">📋 Załadunek (z WZ)</div>'+
-    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="zal-rz-'+id+'" placeholder="0" inputmode="numeric"></div>'+
-    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="zal-15-'+id+'" placeholder="0" inputmode="numeric"></div></div></div>'+
+    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="zal-rz-'+id+'" placeholder="0" inputmode="decimal" step="any" oninput="zapiszRoboczy()"></div>'+
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="zal-15-'+id+'" placeholder="0" inputmode="decimal" step="any" oninput="zapiszRoboczy()"></div></div></div>'+
     '<div class="section-bg" style="border-color:#fed7aa;"><div class="section-label" style="color:#ea580c;">🔧 Rozlane u klientów</div>'+
-    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="roz-rz-'+id+'" placeholder="0" inputmode="numeric"></div>'+
-    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="roz-15-'+id+'" placeholder="0" inputmode="numeric"></div></div></div>';
+    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="roz-rz-'+id+'" placeholder="0" inputmode="decimal" step="any" oninput="zapiszRoboczy()"></div>'+
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="roz-15-'+id+'" placeholder="0" inputmode="decimal" step="any" oninput="zapiszRoboczy()"></div></div></div>';
   document.getElementById('produkty').appendChild(div);
-  if(produktCount>=3) document.getElementById('btn-dodaj').style.display='none';
+  odswiezNumeryProduktow();
+  if(liczAktywneProdukty()>=3) document.getElementById('btn-dodaj').style.display='none';
 }
 function usunProdukt(id){
   var el=document.getElementById('produkt-'+id); if(el) el.remove();
   delete selectedProgs[id];
-  produktCount--;
-  if(produktCount<3) document.getElementById('btn-dodaj').style.display='block';
+  // produktSeq nie zmniejszamy! to gwarantuje unikalność ID na zawsze
+  odswiezNumeryProduktow();
+  if(liczAktywneProdukty()<3) document.getElementById('btn-dodaj').style.display='block';
+  zapiszRoboczy();
+}
+// Aktualizuje widoczne dla kierowcy etykiety "PRODUKT 1, 2, 3" po usunięciu produktu
+// (wewnętrzne ID elementu pozostają stałe – to konsekwentnie naprawia bug ze stale DOM)
+function odswiezNumeryProduktow(){
+  var box=document.getElementById('produkty'); if(!box) return;
+  var karty=box.querySelectorAll('.card[id^="produkt-"]');
+  for(var i=0;i<karty.length;i++){
+    var lab=karty[i].querySelector('.prod-label');
+    if(lab) lab.textContent='PRODUKT '+(i+1);
+  }
 }
 function renderProgramy(id){
   var pal=document.getElementById('pal-'+id).value;
@@ -1142,6 +1236,7 @@ function selProg(id,nr){
   PROGRAMY[document.getElementById('pal-'+id).value].forEach(function(p){
     var el=document.getElementById('prog-'+id+'-'+p.nr); if(el) el.className='prog'+(p.nr===nr?' on':'');
   });
+  zapiszRoboczy();
 }
 function getProgData(palKey,nr){
   if(!palKey||!nr) return null;
@@ -1151,40 +1246,47 @@ function getProgData(palKey,nr){
 }
 
 // ===== WALIDACJA =====
+// Helper: bezpiecznie pobiera wartość pola (zwraca '' jeśli element nie istnieje)
+function valOf(id){ var el=document.getElementById(id); return el?(el.value||''):''; }
+
 function waliduj(){
   var bledy=[];
-  if(!document.getElementById('kierowca').value) bledy.push('Kierowca nie wybrany');
-  if(!document.getElementById('ciagnik').value) bledy.push('Ciągnik nie wybrany');
-  if(!document.getElementById('data').value) bledy.push('Data trasy');
-  if(!document.getElementById('wz').value.trim()) bledy.push('Nr dokumentu WZ');
-  var nb=document.getElementById('naftobaza').value;
+  if(!valOf('kierowca')) bledy.push('Kierowca nie wybrany');
+  if(!valOf('ciagnik')) bledy.push('Ciągnik nie wybrany');
+  if(!valOf('data')) bledy.push('Data trasy');
+  if(!valOf('wz').trim()) bledy.push('Nr dokumentu WZ');
+  var nb=valOf('naftobaza');
   if(!nb) bledy.push('Naftobaza (miejsce załadunku)');
-  else if(nb==='Inna' && !document.getElementById('naftobaza-inna').value.trim()) bledy.push('Wpisz nazwę naftobazy');
-  var kms=document.getElementById('kms').value, kmk=document.getElementById('kmk').value;
+  else if(nb==='Inna' && !valOf('naftobaza-inna').trim()) bledy.push('Wpisz nazwę naftobazy');
+  var kms=valOf('kms'), kmk=valOf('kmk');
   if(!kms) bledy.push('Km start');
   if(!kmk) bledy.push('Km koniec');
   if(kms&&kmk&&parseFloat(kmk)<parseFloat(kms)) bledy.push('Km koniec musi być większy niż start');
   var ids=Object.keys(selectedProgs);
   var aktywne=ids.filter(function(id){ return document.getElementById('produkt-'+id); });
   if(!aktywne.length) bledy.push('Dodaj przynajmniej jeden produkt');
-  aktywne.forEach(function(id){
-    if(!document.getElementById('pal-'+id).value) bledy.push('Produkt '+id+': rodzaj paliwa');
-    if(!selectedProgs[id]) bledy.push('Produkt '+id+': program rozlewania');
-    if(!document.getElementById('zal-rz-'+id).value) bledy.push('Produkt '+id+': załadunek RZ');
-    if(!document.getElementById('zal-15-'+id).value) bledy.push('Produkt '+id+': załadunek 15°C');
-    if(!document.getElementById('roz-rz-'+id).value) bledy.push('Produkt '+id+': rozlane RZ');
-    if(!document.getElementById('roz-15-'+id).value) bledy.push('Produkt '+id+': rozlane 15°C');
+  // FIX: pokazuj kierowcy "Produkt 1/2/3", nie wewnętrzne ID typu "Produkt 5"
+  // Numer porządkowy to indeks w aktywne[] + 1 (zachowując kolejność dodawania).
+  aktywne.sort(function(a,b){ return parseInt(a)-parseInt(b); });
+  aktywne.forEach(function(id, idx){
+    var nr=idx+1;
+    if(!valOf('pal-'+id)) bledy.push('Produkt '+nr+': rodzaj paliwa');
+    if(!selectedProgs[id]) bledy.push('Produkt '+nr+': program rozlewania');
+    if(!valOf('zal-rz-'+id)) bledy.push('Produkt '+nr+': załadunek RZ');
+    if(!valOf('zal-15-'+id)) bledy.push('Produkt '+nr+': załadunek 15°C');
+    if(!valOf('roz-rz-'+id)) bledy.push('Produkt '+nr+': rozlane u klientów RZ');
+    if(!valOf('roz-15-'+id)) bledy.push('Produkt '+nr+': rozlane u klientów 15°C');
     // Sanity checks – kompletne dane wymagane
-    var zRZ=parseFloat(document.getElementById('zal-rz-'+id).value);
-    var z15=parseFloat(document.getElementById('zal-15-'+id).value);
-    var rRZ=parseFloat(document.getElementById('roz-rz-'+id).value);
-    var r15=parseFloat(document.getElementById('roz-15-'+id).value);
-    if(!isNaN(zRZ)&&zRZ<=0) bledy.push('Produkt '+id+': załadunek RZ musi być większy niż 0');
-    if(!isNaN(z15)&&z15<=0) bledy.push('Produkt '+id+': załadunek 15°C musi być większy niż 0');
-    if(!isNaN(rRZ)&&rRZ<0) bledy.push('Produkt '+id+': rozlane RZ nie może być ujemne');
-    if(!isNaN(r15)&&r15<0) bledy.push('Produkt '+id+': rozlane 15°C nie może być ujemne');
-    if(!isNaN(zRZ)&&!isNaN(rRZ)&&rRZ>zRZ) bledy.push('Produkt '+id+': rozlane RZ ('+rRZ+') > załadunek RZ ('+zRZ+') – niemożliwe');
-    if(!isNaN(z15)&&!isNaN(r15)&&r15>z15) bledy.push('Produkt '+id+': rozlane 15°C ('+r15+') > załadunek 15°C ('+z15+') – niemożliwe');
+    var zRZ=parseFloat(valOf('zal-rz-'+id));
+    var z15=parseFloat(valOf('zal-15-'+id));
+    var rRZ=parseFloat(valOf('roz-rz-'+id));
+    var r15=parseFloat(valOf('roz-15-'+id));
+    if(!isNaN(zRZ)&&zRZ<=0) bledy.push('Produkt '+nr+': załadunek RZ musi być większy niż 0');
+    if(!isNaN(z15)&&z15<=0) bledy.push('Produkt '+nr+': załadunek 15°C musi być większy niż 0');
+    if(!isNaN(rRZ)&&rRZ<0) bledy.push('Produkt '+nr+': rozlane RZ nie może być ujemne');
+    if(!isNaN(r15)&&r15<0) bledy.push('Produkt '+nr+': rozlane 15°C nie może być ujemne');
+    if(!isNaN(zRZ)&&!isNaN(rRZ)&&rRZ>zRZ) bledy.push('Produkt '+nr+': rozlane RZ ('+rRZ+') > załadunek RZ ('+zRZ+') – niemożliwe');
+    if(!isNaN(z15)&&!isNaN(r15)&&r15>z15) bledy.push('Produkt '+nr+': rozlane 15°C ('+r15+') > załadunek 15°C ('+z15+') – niemożliwe');
   });
   return bledy;
 }
@@ -1193,7 +1295,9 @@ function waliduj(){
 function sprawdzUbytkiKrytyczne(){
   var ostrzezenia=[];
   var ids=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
-  ids.forEach(function(id){
+  ids.sort(function(a,b){ return parseInt(a)-parseInt(b); });
+  ids.forEach(function(id, idx){
+    var nrWyswietlany=idx+1;
     var pal=document.getElementById('pal-'+id).value;
     var prog=selectedProgs[id];
     var pd=getProgData(pal,prog);
@@ -1206,9 +1310,9 @@ function sprawdzUbytkiKrytyczne(){
     var procent=ubytek/zalU*100;
     var norma=pd.wsp; // wsp w procentach
     if(pd.grawitacja && ubytek>0){
-      ostrzezenia.push({id:id,produkt:'Produkt '+id+' (GRAWITACJA)',ubytek:ubytek.toFixed(2),procent:procent.toFixed(2),norma:'0%',powod:'GRAW – każdy ubytek wymaga wyjaśnienia'});
+      ostrzezenia.push({id:id,produkt:'Produkt '+nrWyswietlany+' (GRAWITACJA)',ubytek:ubytek.toFixed(2),procent:procent.toFixed(2),norma:'0%',powod:'GRAW – każdy ubytek wymaga wyjaśnienia'});
     } else if(procent>norma+2){ // ponad normę o więcej niż 2pp
-      ostrzezenia.push({id:id,produkt:'Produkt '+id+' ('+pal+', program '+prog+')',ubytek:ubytek.toFixed(2),procent:procent.toFixed(2),norma:norma+'%',powod:''});
+      ostrzezenia.push({id:id,produkt:'Produkt '+nrWyswietlany+' ('+pal+', program '+prog+')',ubytek:ubytek.toFixed(2),procent:procent.toFixed(2),norma:norma+'%',powod:''});
     }
   });
   return ostrzezenia;
@@ -1232,6 +1336,9 @@ function zbudujPayload(powodyUbytkow){
   var km=kmk-kms;
   var produktyData=[];
   var ids=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
+  // Sortujemy po ID rosnąco — to gwarantuje, że kolejność produktów w arkuszu odpowiada
+  // kolejności dodawania ich przez kierowcę.
+  ids.sort(function(a,b){ return parseInt(a)-parseInt(b); });
   ids.forEach(function(id){
     var pal=document.getElementById('pal-'+id).value;
     var prog=selectedProgs[id];
@@ -1342,6 +1449,10 @@ function potwierdzUbytkiIWyslij(){
   var rows=lista.children;
   var powody={};
   var braki=[];
+  // Mapowanie wewnętrznego ID -> numer porządkowy widoczny dla kierowcy
+  var aktywneIds=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
+  aktywneIds.sort(function(a,b){ return parseInt(a)-parseInt(b); });
+  var nrPoIdInternal={}; aktywneIds.forEach(function(id, idx){ nrPoIdInternal[id]=idx+1; });
   for(var i=0;i<rows.length;i++){
     var sel=rows[i].querySelector('select[id^="powod-"]');
     var inp=rows[i].querySelector('input[id^="powod-inny-"]');
@@ -1349,11 +1460,12 @@ function potwierdzUbytkiIWyslij(){
     var idMatch=sel.id.match(/powod-(.+)/);
     if(!idMatch) continue;
     var id=idMatch[1];
+    var nrLabel='Produkt '+(nrPoIdInternal[id]||id);
     var v=sel.value;
-    if(!v){ braki.push('Produkt '+id); continue; }
+    if(!v){ braki.push(nrLabel); continue; }
     if(v==='Inna'){
       var op=(inp.value||'').trim();
-      if(!op){ braki.push('Produkt '+id+' – opisz "Inna"'); continue; }
+      if(!op){ braki.push(nrLabel+' – opisz "Inna"'); continue; }
       powody[id]='Inna: '+op;
     } else {
       powody[id]=v;
@@ -1375,16 +1487,31 @@ function wyslijFinalnie(payload){
   saveHistoria(hist);
   lsRemove('cysterna_roboczy');
   document.getElementById('draft-bar').classList.remove('show');
+
+  // Najpierw pokazujemy ekran "Wysyłanie..." żeby kierowca wiedział, że coś się dzieje
+  document.getElementById('ok-ico').textContent='⏳';
+  document.getElementById('ok-title').textContent='WYSYŁANIE...';
+  document.getElementById('ok-msg').textContent='Łączenie z arkuszem – zaczekaj chwilę.';
+  document.getElementById('ok-offline-info').style.display='none';
+  document.getElementById('form-main').style.display='none';
+  document.getElementById('ok-screen').style.display='block';
+
   if(isOnline){
     safeFetch(payload).then(function(){
+      // Sukces (lub przynajmniej fetch nie został odrzucony – mode no-cors nie daje więcej)
       var h=getHistoria(); h.forEach(function(x){ if(x.ts===ts) x.wyslane=true; }); saveHistoria(h);
+      document.getElementById('ok-ico').textContent='✅';
+      document.getElementById('ok-title').textContent='WYSŁANO!';
+      document.getElementById('ok-msg').textContent='Dane zapisane do Google Sheets.';
+      document.getElementById('ok-offline-info').style.display='none';
     }).catch(function(){
+      // Fetch padł (timeout/abort/błąd sieci) – wrzucamy do kolejki "do dosłania"
       var ocz=getOczekujace(); ocz.push(payload); saveOczekujace(ocz);
+      document.getElementById('ok-ico').textContent='📴';
+      document.getElementById('ok-title').textContent='ZAPISANO LOKALNIE';
+      document.getElementById('ok-msg').textContent='Sieć była niestabilna – wyślemy automatycznie później.';
+      document.getElementById('ok-offline-info').style.display='block';
     });
-    document.getElementById('ok-ico').textContent='✅';
-    document.getElementById('ok-title').textContent='WYSŁANO!';
-    document.getElementById('ok-msg').textContent='Dane zapisane do Google Sheets!';
-    document.getElementById('ok-offline-info').style.display='none';
   } else {
     var ocz=getOczekujace(); ocz.push(payload); saveOczekujace(ocz);
     document.getElementById('ok-ico').textContent='📴';
@@ -1392,8 +1519,6 @@ function wyslijFinalnie(payload){
     document.getElementById('ok-msg').textContent='Brak internetu – wyślemy automatycznie!';
     document.getElementById('ok-offline-info').style.display='block';
   }
-  document.getElementById('form-main').style.display='none';
-  document.getElementById('ok-screen').style.display='block';
   if(btn){ btn.disabled=false; btn.textContent='✓ WYŚLIJ DANE'; }
 }
 
@@ -1406,10 +1531,15 @@ function resetForm(){
   document.getElementById('spalanie-wynik').style.display='none';
   document.getElementById('val-box').style.display='none';
   document.getElementById('produkty').innerHTML='';
-  produktCount=0; selectedProgs={};
+  // FIX: nowy mechanizm sekwencyjnych ID – nie resetujemy produktSeq, żeby nie wywołać kolizji
+  // z elementami które mogłyby gdzieś jeszcze wisieć (np. w pamięci po wycofanej animacji).
+  selectedProgs={};
   document.getElementById('btn-dodaj').style.display='block';
   document.getElementById('form-main').style.display='block';
   document.getElementById('ok-screen').style.display='none';
+  // Wyczyść roboczy bufor przy nowym wpisie
+  lsRemove('cysterna_roboczy');
+  document.getElementById('draft-bar').classList.remove('show');
   dodajProdukt(); window.scrollTo(0,0);
 }
 
