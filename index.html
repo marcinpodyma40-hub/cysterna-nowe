@@ -882,19 +882,32 @@ function safeFetch(payload){
   });
 }
 
+// FIX: flaga zapobiegająca równoczesnym wywołaniom wyslijOczekujace
+var _wysylkaTrwa=false;
 function wyslijOczekujace(){
+  if(_wysylkaTrwa) return;
   var oczekujace=getOczekujace();
   if(!oczekujace.length) return;
-  var pozostale=[];
+  _wysylkaTrwa=true;
+  var snapshot=oczekujace.slice();
+  var statusy={};
   var doneCount=0;
-  oczekujace.forEach(function(p){
+  snapshot.forEach(function(p){
     safeFetch(p).then(function(){
       var hist=getHistoria();
       hist.forEach(function(h){ if(h.ts===p.ts) h.wyslane=true; });
       saveHistoria(hist);
-    }).catch(function(){ pozostale.push(p); }).then(function(){
+      statusy[p.ts]='ok';
+    }).catch(function(){
+      statusy[p.ts]='err';
+    }).then(function(){
       doneCount++;
-      if(doneCount===oczekujace.length) saveOczekujace(pozostale);
+      if(doneCount===snapshot.length){
+        var aktualna=getOczekujace();
+        var nowa=aktualna.filter(function(x){ return statusy[x.ts]!=='ok'; });
+        saveOczekujace(nowa);
+        _wysylkaTrwa=false;
+      }
     });
   });
 }
@@ -1279,7 +1292,17 @@ var PROGRAMY={
   PB:[{nr:17,typ:'RZ',wsp:2},{nr:18,typ:'15',wsp:2},{nr:99,typ:'RZ',wsp:0,grawitacja:true}],
   OP:[{nr:21,typ:'RZ',wsp:2},{nr:22,typ:'15',wsp:2}]
 };
-var produktCount=0, selectedProgs={};
+// FIX: produktCount musi być zawsze rosnący (UID), bo był używany jako element ID w DOM.
+// Stary kod robił produktCount-- przy usunięciu, co powodowało kolizje ID
+// (dwa elementy z id="produkt-2") i błędy walidacji typu "Produkt X: załadunek RZ"
+// mimo wypełnionych pól. Klasyczny stale-DOM bug.
+var produktSeq=0;
+var selectedProgs={};
+function liczAktywneProdukty(){
+  var box=document.getElementById('produkty');
+  if(!box) return 0;
+  return box.querySelectorAll('.card[id^="produkt-"]').length;
+}
 
 function obliczSpalanie(){
   var litry=parseFloat(document.getElementById('tank-litry').value);
@@ -1294,28 +1317,40 @@ function obliczSpalanie(){
 }
 
 function dodajProdukt(){
-  if(produktCount>=3){ alert('Maksymalnie 3 produkty!'); return; }
-  produktCount++; var id=produktCount; selectedProgs[id]=null;
+  if(liczAktywneProdukty()>=3){ alert('Maksymalnie 3 produkty!'); return; }
+  produktSeq++; var id=produktSeq; selectedProgs[id]=null;
+  var nrWyswietlany=liczAktywneProdukty()+1;
   var div=document.createElement('div'); div.className='card'; div.id='produkt-'+id; div.style.borderLeft='4px solid #2563eb';
-  div.innerHTML='<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">PRODUKT '+id+
-    (id>1?'<button class="btn-remove" onclick="usunProdukt('+id+')">✕ Usuń</button>':'')+
+  div.setAttribute('data-pid', id);
+  div.innerHTML='<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;"><span class="prod-label">PRODUKT '+nrWyswietlany+'</span>'+
+    '<button class="btn-remove" onclick="usunProdukt('+id+')">✕ Usuń</button>'+
     '</div><label style="margin-top:0">Rodzaj paliwa *</label>'+
     '<select id="pal-'+id+'" onchange="renderProgramy('+id+')"><option value="">– wybierz –</option><option value="ON">ON – Olej napędowy</option><option value="PB">PB95 – Benzyna</option><option value="OP">Olej opałowy</option></select>'+
     '<label>Program rozlewania *</label><div class="prog-grid" id="progi-'+id+'"><p style="color:#94a3b8;font-size:13px;grid-column:1/-1;">Najpierw wybierz paliwo</p></div>'+
     '<div class="section-bg"><div class="section-label" style="color:#2563eb;">📋 Załadunek (z WZ)</div>'+
-    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="zal-rz-'+id+'" placeholder="0" inputmode="numeric"></div>'+
-    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="zal-15-'+id+'" placeholder="0" inputmode="numeric"></div></div></div>'+
+    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="zal-rz-'+id+'" placeholder="0" inputmode="decimal" step="any"></div>'+
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="zal-15-'+id+'" placeholder="0" inputmode="decimal" step="any"></div></div></div>'+
     '<div class="section-bg" style="border-color:#fed7aa;"><div class="section-label" style="color:#ea580c;">🔧 Rozlane u klientów</div>'+
-    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="roz-rz-'+id+'" placeholder="0" inputmode="numeric"></div>'+
-    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="roz-15-'+id+'" placeholder="0" inputmode="numeric"></div></div></div>';
+    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="roz-rz-'+id+'" placeholder="0" inputmode="decimal" step="any"></div>'+
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="roz-15-'+id+'" placeholder="0" inputmode="decimal" step="any"></div></div></div>';
   document.getElementById('produkty').appendChild(div);
-  if(produktCount>=3) document.getElementById('btn-dodaj').style.display='none';
+  odswiezNumeryProduktow();
+  if(liczAktywneProdukty()>=3) document.getElementById('btn-dodaj').style.display='none';
 }
 function usunProdukt(id){
   var el=document.getElementById('produkt-'+id); if(el) el.remove();
   delete selectedProgs[id];
-  produktCount--;
-  if(produktCount<3) document.getElementById('btn-dodaj').style.display='block';
+  // produktSeq nie zmniejszamy (gwarancja unikalności ID)
+  odswiezNumeryProduktow();
+  if(liczAktywneProdukty()<3) document.getElementById('btn-dodaj').style.display='block';
+}
+function odswiezNumeryProduktow(){
+  var box=document.getElementById('produkty'); if(!box) return;
+  var karty=box.querySelectorAll('.card[id^="produkt-"]');
+  for(var i=0;i<karty.length;i++){
+    var lab=karty[i].querySelector('.prod-label');
+    if(lab) lab.textContent='PRODUKT '+(i+1);
+  }
 }
 function renderProgramy(id){
   var pal=document.getElementById('pal-'+id).value;
@@ -1367,24 +1402,31 @@ function waliduj(){
   var ids=Object.keys(selectedProgs);
   var aktywne=ids.filter(function(id){ return document.getElementById('produkt-'+id); });
   if(!aktywne.length) bledy.push('Dodaj przynajmniej jeden produkt');
-  aktywne.forEach(function(id){
-    if(!document.getElementById('pal-'+id).value) bledy.push('Produkt '+id+': rodzaj paliwa');
-    if(!selectedProgs[id]) bledy.push('Produkt '+id+': program rozlewania');
-    if(!document.getElementById('zal-rz-'+id).value) bledy.push('Produkt '+id+': załadunek RZ');
-    if(!document.getElementById('zal-15-'+id).value) bledy.push('Produkt '+id+': załadunek 15°C');
-    if(!document.getElementById('roz-rz-'+id).value) bledy.push('Produkt '+id+': rozlane RZ');
-    if(!document.getElementById('roz-15-'+id).value) bledy.push('Produkt '+id+': rozlane 15°C');
-    // Sanity checks – kompletne dane wymagane
-    var zRZ=parseFloat(document.getElementById('zal-rz-'+id).value);
-    var z15=parseFloat(document.getElementById('zal-15-'+id).value);
-    var rRZ=parseFloat(document.getElementById('roz-rz-'+id).value);
-    var r15=parseFloat(document.getElementById('roz-15-'+id).value);
-    if(!isNaN(zRZ)&&zRZ<=0) bledy.push('Produkt '+id+': załadunek RZ musi być większy niż 0');
-    if(!isNaN(z15)&&z15<=0) bledy.push('Produkt '+id+': załadunek 15°C musi być większy niż 0');
-    if(!isNaN(rRZ)&&rRZ<0) bledy.push('Produkt '+id+': rozlane RZ nie może być ujemne');
-    if(!isNaN(r15)&&r15<0) bledy.push('Produkt '+id+': rozlane 15°C nie może być ujemne');
-    if(!isNaN(zRZ)&&!isNaN(rRZ)&&rRZ>zRZ) bledy.push('Produkt '+id+': rozlane RZ ('+rRZ+') > załadunek RZ ('+zRZ+') – niemożliwe');
-    if(!isNaN(z15)&&!isNaN(r15)&&r15>z15) bledy.push('Produkt '+id+': rozlane 15°C ('+r15+') > załadunek 15°C ('+z15+') – niemożliwe');
+  // FIX: numerowanie porządkowe (1/2/3), nie wewnętrzne ID
+  aktywne.sort(function(a,b){ return parseInt(a)-parseInt(b); });
+  aktywne.forEach(function(id, idx){
+    var nr=idx+1;
+    var palEl=document.getElementById('pal-'+id);
+    var zrzEl=document.getElementById('zal-rz-'+id);
+    var z15El=document.getElementById('zal-15-'+id);
+    var rrzEl=document.getElementById('roz-rz-'+id);
+    var r15El=document.getElementById('roz-15-'+id);
+    if(!(palEl&&palEl.value)) bledy.push('Produkt '+nr+': rodzaj paliwa');
+    if(!selectedProgs[id]) bledy.push('Produkt '+nr+': program rozlewania');
+    if(!(zrzEl&&zrzEl.value)) bledy.push('Produkt '+nr+': załadunek RZ');
+    if(!(z15El&&z15El.value)) bledy.push('Produkt '+nr+': załadunek 15°C');
+    if(!(rrzEl&&rrzEl.value)) bledy.push('Produkt '+nr+': rozlane u klientów RZ');
+    if(!(r15El&&r15El.value)) bledy.push('Produkt '+nr+': rozlane u klientów 15°C');
+    var zRZ=parseFloat(zrzEl?zrzEl.value:NaN);
+    var z15=parseFloat(z15El?z15El.value:NaN);
+    var rRZ=parseFloat(rrzEl?rrzEl.value:NaN);
+    var r15=parseFloat(r15El?r15El.value:NaN);
+    if(!isNaN(zRZ)&&zRZ<=0) bledy.push('Produkt '+nr+': załadunek RZ musi być większy niż 0');
+    if(!isNaN(z15)&&z15<=0) bledy.push('Produkt '+nr+': załadunek 15°C musi być większy niż 0');
+    if(!isNaN(rRZ)&&rRZ<0) bledy.push('Produkt '+nr+': rozlane RZ nie może być ujemne');
+    if(!isNaN(r15)&&r15<0) bledy.push('Produkt '+nr+': rozlane 15°C nie może być ujemne');
+    if(!isNaN(zRZ)&&!isNaN(rRZ)&&rRZ>zRZ) bledy.push('Produkt '+nr+': rozlane RZ ('+rRZ+') > załadunek RZ ('+zRZ+') – niemożliwe');
+    if(!isNaN(z15)&&!isNaN(r15)&&r15>z15) bledy.push('Produkt '+nr+': rozlane 15°C ('+r15+') > załadunek 15°C ('+z15+') – niemożliwe');
   });
   return bledy;
 }
@@ -1393,7 +1435,9 @@ function waliduj(){
 function sprawdzUbytkiKrytyczne(){
   var ostrzezenia=[];
   var ids=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
-  ids.forEach(function(id){
+  ids.sort(function(a,b){ return parseInt(a)-parseInt(b); });
+  ids.forEach(function(id, idx){
+    var nrWyswietlany=idx+1;
     var pal=document.getElementById('pal-'+id).value;
     var prog=selectedProgs[id];
     var pd=getProgData(pal,prog);
@@ -1406,9 +1450,9 @@ function sprawdzUbytkiKrytyczne(){
     var procent=ubytek/zalU*100;
     var norma=pd.wsp; // wsp w procentach
     if(pd.grawitacja && ubytek>0){
-      ostrzezenia.push({id:id,produkt:'Produkt '+id+' (GRAWITACJA)',ubytek:ubytek.toFixed(2),procent:procent.toFixed(2),norma:'0%',powod:'GRAW – każdy ubytek wymaga wyjaśnienia'});
+      ostrzezenia.push({id:id,produkt:'Produkt '+nrWyswietlany+' (GRAWITACJA)',ubytek:ubytek.toFixed(2),procent:procent.toFixed(2),norma:'0%',powod:'GRAW – każdy ubytek wymaga wyjaśnienia'});
     } else if(procent>norma+2){ // ponad normę o więcej niż 2pp
-      ostrzezenia.push({id:id,produkt:'Produkt '+id+' ('+pal+', program '+prog+')',ubytek:ubytek.toFixed(2),procent:procent.toFixed(2),norma:norma+'%',powod:''});
+      ostrzezenia.push({id:id,produkt:'Produkt '+nrWyswietlany+' ('+pal+', program '+prog+')',ubytek:ubytek.toFixed(2),procent:procent.toFixed(2),norma:norma+'%',powod:''});
     }
   });
   return ostrzezenia;
@@ -1432,6 +1476,8 @@ function zbudujPayload(powodyUbytkow){
   var km=kmk-kms;
   var produktyData=[];
   var ids=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
+  // Stabilna kolejność produktów (po ID rosnąco = po kolejności dodawania)
+  ids.sort(function(a,b){ return parseInt(a)-parseInt(b); });
   ids.forEach(function(id){
     var pal=document.getElementById('pal-'+id).value;
     var prog=selectedProgs[id];
@@ -1542,6 +1588,10 @@ function potwierdzUbytkiIWyslij(){
   var rows=lista.children;
   var powody={};
   var braki=[];
+  // Mapowanie wewnętrznego ID -> numer porządkowy widoczny dla kierowcy
+  var aktywneIds=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
+  aktywneIds.sort(function(a,b){ return parseInt(a)-parseInt(b); });
+  var nrPoIdInternal={}; aktywneIds.forEach(function(id, idx){ nrPoIdInternal[id]=idx+1; });
   for(var i=0;i<rows.length;i++){
     var sel=rows[i].querySelector('select[id^="powod-"]');
     var inp=rows[i].querySelector('input[id^="powod-inny-"]');
@@ -1549,11 +1599,12 @@ function potwierdzUbytkiIWyslij(){
     var idMatch=sel.id.match(/powod-(.+)/);
     if(!idMatch) continue;
     var id=idMatch[1];
+    var nrLabel='Produkt '+(nrPoIdInternal[id]||id);
     var v=sel.value;
-    if(!v){ braki.push('Produkt '+id); continue; }
+    if(!v){ braki.push(nrLabel); continue; }
     if(v==='Inna'){
       var op=(inp.value||'').trim();
-      if(!op){ braki.push('Produkt '+id+' – opisz "Inna"'); continue; }
+      if(!op){ braki.push(nrLabel+' – opisz "Inna"'); continue; }
       powody[id]='Inna: '+op;
     } else {
       powody[id]=v;
@@ -1571,20 +1622,33 @@ function wyslijFinalnie(payload){
   var ts=payload.ts;
   var hist=getHistoria();
   hist.push(Object.assign({},payload,{wyslane:false}));
-  if(hist.length>200) hist=hist.slice(-200); // zwiększyłem limit – wpisy korygujące się dokładają
+  if(hist.length>200) hist=hist.slice(-200);
   saveHistoria(hist);
   lsRemove('cysterna_roboczy');
   document.getElementById('draft-bar').classList.remove('show');
+
+  // Najpierw "Wysyłanie..." żeby użytkownik wiedział, że trwa
+  document.getElementById('ok-ico').textContent='⏳';
+  document.getElementById('ok-title').textContent='WYSYŁANIE...';
+  document.getElementById('ok-msg').textContent='Łączenie z arkuszem – zaczekaj chwilę.';
+  document.getElementById('ok-offline-info').style.display='none';
+  document.getElementById('form-main').style.display='none';
+  document.getElementById('ok-screen').style.display='block';
+
   if(isOnline){
     safeFetch(payload).then(function(){
       var h=getHistoria(); h.forEach(function(x){ if(x.ts===ts) x.wyslane=true; }); saveHistoria(h);
+      document.getElementById('ok-ico').textContent='✅';
+      document.getElementById('ok-title').textContent='WYSŁANO!';
+      document.getElementById('ok-msg').textContent='Dane zapisane do Google Sheets.';
+      document.getElementById('ok-offline-info').style.display='none';
     }).catch(function(){
       var ocz=getOczekujace(); ocz.push(payload); saveOczekujace(ocz);
+      document.getElementById('ok-ico').textContent='📴';
+      document.getElementById('ok-title').textContent='ZAPISANO LOKALNIE';
+      document.getElementById('ok-msg').textContent='Sieć była niestabilna – wyślemy automatycznie później.';
+      document.getElementById('ok-offline-info').style.display='block';
     });
-    document.getElementById('ok-ico').textContent='✅';
-    document.getElementById('ok-title').textContent='WYSŁANO!';
-    document.getElementById('ok-msg').textContent='Dane zapisane do Google Sheets!';
-    document.getElementById('ok-offline-info').style.display='none';
   } else {
     var ocz=getOczekujace(); ocz.push(payload); saveOczekujace(ocz);
     document.getElementById('ok-ico').textContent='📴';
@@ -1592,8 +1656,6 @@ function wyslijFinalnie(payload){
     document.getElementById('ok-msg').textContent='Brak internetu – wyślemy automatycznie!';
     document.getElementById('ok-offline-info').style.display='block';
   }
-  document.getElementById('form-main').style.display='none';
-  document.getElementById('ok-screen').style.display='block';
   if(btn){ btn.disabled=false; btn.textContent='✓ WYŚLIJ DANE'; }
 }
 
@@ -1606,7 +1668,7 @@ function resetForm(){
   document.getElementById('spalanie-wynik').style.display='none';
   document.getElementById('val-box').style.display='none';
   document.getElementById('produkty').innerHTML='';
-  produktCount=0; selectedProgs={};
+  selectedProgs={};
   document.getElementById('btn-dodaj').style.display='block';
   document.getElementById('form-main').style.display='block';
   document.getElementById('ok-screen').style.display='none';
