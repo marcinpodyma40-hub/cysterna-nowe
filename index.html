@@ -162,14 +162,14 @@ input[type=file]{display:none;}
     <input type="text" id="naftobaza-inna" placeholder="Wpisz nazwę naftobazy..." style="margin-top:8px;display:none;" oninput="zapiszRoboczy()">
 
     <div class="row2" style="margin-top:14px;">
-      <div><label style="margin-top:0">Km start *</label><input type="number" id="kms" placeholder="0" inputmode="numeric" oninput="obliczSpalanie();zapiszRoboczy()"></div>
-      <div><label style="margin-top:0">Km koniec *</label><input type="number" id="kmk" placeholder="0" inputmode="numeric" oninput="obliczSpalanie();zapiszRoboczy()"></div>
+      <div><label style="margin-top:0">Km start *</label><input type="text" id="kms" placeholder="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off" oninput="obliczSpalanie();zapiszRoboczy()"></div>
+      <div><label style="margin-top:0">Km koniec *</label><input type="text" id="kmk" placeholder="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off" oninput="obliczSpalanie();zapiszRoboczy()"></div>
     </div>
 
     <div class="card" style="border-left:4px solid #f59e0b;">
       <div class="card-title">⛽ Tankowanie pojazdu</div>
       <label style="margin-top:0">Zatankowano (litry)</label>
-      <input type="number" id="tank-litry" placeholder="0.00" inputmode="decimal" oninput="obliczSpalanie();zapiszRoboczy()">
+      <input type="text" id="tank-litry" placeholder="0.00" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="obliczSpalanie();zapiszRoboczy()">
       <p style="font-size:11px;color:#64748b;margin-top:4px;">💡 Spalanie liczy się automatycznie z różnicy Km start ↔ Km koniec</p>
       <div id="spalanie-wynik" style="display:none;" class="stat-box">
         <div class="stat-lab">Spalanie</div>
@@ -1051,7 +1051,9 @@ function renderHistoria(){
       var statusKolor='#475569';
       if(p.status==='PONAD NORMĘ'||p.status==='DUŻY UBYTEK'||p.status==='DO WYJAŚNIENIA') statusKolor='#b91c1c';
       else if(p.status==='OK – W NORMIE'||p.status==='OK – BEZ UBYTKÓW'||p.status==='OSZCZĘDNOŚĆ') statusKolor='#15803d';
-      var line='<div style="font-size:12px;color:'+statusKolor+';margin-top:4px;">'+p.paliwo+(p.grawitacja?' GRAW':'')+': zał.'+p.zaladunek_RZ+'L | roz.'+p.rozlane_RZ+'L | <b>'+p.status+'</b></div>';
+      else if(p.nadwyzka || p.status==='OSZCZĘDNOŚĆ – KORZYŚĆ DLA BIURA') statusKolor='#15803d';
+      var nadwyzkaInfo = (p.nadwyzka && p.nadwyzkaIle) ? ' <span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;font-weight:700;">+'+p.nadwyzkaIle+'L nadwyżki</span>' : '';
+      var line='<div style="font-size:12px;color:'+statusKolor+';margin-top:4px;">'+p.paliwo+(p.grawitacja?' GRAW':'')+': zał.'+p.zaladunek_RZ+'L | roz.'+p.rozlane_RZ+'L | <b>'+p.status+'</b>'+nadwyzkaInfo+'</div>';
       if(p.powodUbytku) line+='<div style="font-size:11px;color:#7c2d12;margin-left:10px;font-style:italic;">↳ powód: '+p.powodUbytku+'</div>';
       return line;
     }).join('');
@@ -1305,9 +1307,9 @@ function liczAktywneProdukty(){
 }
 
 function obliczSpalanie(){
-  var litry=parseFloat(document.getElementById('tank-litry').value);
-  var kms=parseFloat(document.getElementById('kms').value);
-  var kmk=parseFloat(document.getElementById('kmk').value);
+  var litry=parseLiczba(valOf('tank-litry'));
+  var kms=parseLiczba(valOf('kms'));
+  var kmk=parseLiczba(valOf('kmk'));
   var wynik=document.getElementById('spalanie-wynik');
   var dystans=(kms>0&&kmk>0&&kmk>kms)?(kmk-kms):0;
   if(dystans>0&&litry>0){
@@ -1328,11 +1330,11 @@ function dodajProdukt(){
     '<select id="pal-'+id+'" onchange="renderProgramy('+id+')"><option value="">– wybierz –</option><option value="ON">ON – Olej napędowy</option><option value="PB">PB95 – Benzyna</option><option value="OP">Olej opałowy</option></select>'+
     '<label>Program rozlewania *</label><div class="prog-grid" id="progi-'+id+'"><p style="color:#94a3b8;font-size:13px;grid-column:1/-1;">Najpierw wybierz paliwo</p></div>'+
     '<div class="section-bg"><div class="section-label" style="color:#2563eb;">📋 Załadunek (z WZ)</div>'+
-    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="zal-rz-'+id+'" placeholder="0" inputmode="decimal" step="any"></div>'+
-    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="zal-15-'+id+'" placeholder="0" inputmode="decimal" step="any"></div></div></div>'+
+    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="text" id="zal-rz-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off"></div>'+
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="text" id="zal-15-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off"></div></div></div>'+
     '<div class="section-bg" style="border-color:#fed7aa;"><div class="section-label" style="color:#ea580c;">🔧 Rozlane u klientów</div>'+
-    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="number" id="roz-rz-'+id+'" placeholder="0" inputmode="decimal" step="any"></div>'+
-    '<div><label style="margin-top:0">Litry 15°C *</label><input type="number" id="roz-15-'+id+'" placeholder="0" inputmode="decimal" step="any"></div></div></div>';
+    '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="text" id="roz-rz-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off"></div>'+
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="text" id="roz-15-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off"></div></div></div>';
   document.getElementById('produkty').appendChild(div);
   odswiezNumeryProduktow();
   if(liczAktywneProdukty()>=3) document.getElementById('btn-dodaj').style.display='none';
@@ -1386,47 +1388,57 @@ function getProgData(palKey,nr){
 }
 
 // ===== WALIDACJA =====
+// Helpery: bezpieczny dostęp + parsowanie liczby z przecinkiem (PL)
+function valOf(id){ var el=document.getElementById(id); return el?(el.value||''):''; }
+function parseLiczba(v){
+  if(v===null||v===undefined) return NaN;
+  var s=String(v).trim();
+  if(!s) return NaN;
+  s=s.replace(/[\s\u00a0]/g,'').replace(',','.');
+  var n=parseFloat(s);
+  return isNaN(n)?NaN:n;
+}
+function maWartosc(id){ return valOf(id).replace(/[\s\u00a0]/g,'')!==''; }
+
 function waliduj(){
   var bledy=[];
-  if(!document.getElementById('kierowca').value) bledy.push('Kierowca nie wybrany');
-  if(!document.getElementById('ciagnik').value) bledy.push('Ciągnik nie wybrany');
-  if(!document.getElementById('data').value) bledy.push('Data trasy');
-  if(!document.getElementById('wz').value.trim()) bledy.push('Nr dokumentu WZ');
-  var nb=document.getElementById('naftobaza').value;
+  if(!valOf('kierowca')) bledy.push('Kierowca nie wybrany');
+  if(!valOf('ciagnik')) bledy.push('Ciągnik nie wybrany');
+  if(!valOf('data')) bledy.push('Data trasy');
+  if(!valOf('wz').trim()) bledy.push('Nr dokumentu WZ');
+  var nb=valOf('naftobaza');
   if(!nb) bledy.push('Naftobaza (miejsce załadunku)');
-  else if(nb==='Inna' && !document.getElementById('naftobaza-inna').value.trim()) bledy.push('Wpisz nazwę naftobazy');
-  var kms=document.getElementById('kms').value, kmk=document.getElementById('kmk').value;
+  else if(nb==='Inna' && !valOf('naftobaza-inna').trim()) bledy.push('Wpisz nazwę naftobazy');
+  var kms=valOf('kms'), kmk=valOf('kmk');
   if(!kms) bledy.push('Km start');
   if(!kmk) bledy.push('Km koniec');
-  if(kms&&kmk&&parseFloat(kmk)<parseFloat(kms)) bledy.push('Km koniec musi być większy niż start');
+  if(kms&&kmk&&parseLiczba(kmk)<parseLiczba(kms)) bledy.push('Km koniec musi być większy niż start');
   var ids=Object.keys(selectedProgs);
   var aktywne=ids.filter(function(id){ return document.getElementById('produkt-'+id); });
   if(!aktywne.length) bledy.push('Dodaj przynajmniej jeden produkt');
-  // FIX: numerowanie porządkowe (1/2/3), nie wewnętrzne ID
   aktywne.sort(function(a,b){ return parseInt(a)-parseInt(b); });
   aktywne.forEach(function(id, idx){
     var nr=idx+1;
-    var palEl=document.getElementById('pal-'+id);
-    var zrzEl=document.getElementById('zal-rz-'+id);
-    var z15El=document.getElementById('zal-15-'+id);
-    var rrzEl=document.getElementById('roz-rz-'+id);
-    var r15El=document.getElementById('roz-15-'+id);
-    if(!(palEl&&palEl.value)) bledy.push('Produkt '+nr+': rodzaj paliwa');
+    if(!valOf('pal-'+id)) bledy.push('Produkt '+nr+': rodzaj paliwa');
     if(!selectedProgs[id]) bledy.push('Produkt '+nr+': program rozlewania');
-    if(!(zrzEl&&zrzEl.value)) bledy.push('Produkt '+nr+': załadunek RZ');
-    if(!(z15El&&z15El.value)) bledy.push('Produkt '+nr+': załadunek 15°C');
-    if(!(rrzEl&&rrzEl.value)) bledy.push('Produkt '+nr+': rozlane u klientów RZ');
-    if(!(r15El&&r15El.value)) bledy.push('Produkt '+nr+': rozlane u klientów 15°C');
-    var zRZ=parseFloat(zrzEl?zrzEl.value:NaN);
-    var z15=parseFloat(z15El?z15El.value:NaN);
-    var rRZ=parseFloat(rrzEl?rrzEl.value:NaN);
-    var r15=parseFloat(r15El?r15El.value:NaN);
+    if(!maWartosc('zal-rz-'+id)) bledy.push('Produkt '+nr+': załadunek RZ');
+    if(!maWartosc('zal-15-'+id)) bledy.push('Produkt '+nr+': załadunek 15°C');
+    if(!maWartosc('roz-rz-'+id)) bledy.push('Produkt '+nr+': rozlane u klientów RZ');
+    if(!maWartosc('roz-15-'+id)) bledy.push('Produkt '+nr+': rozlane u klientów 15°C');
+    var zRZ=parseLiczba(valOf('zal-rz-'+id));
+    var z15=parseLiczba(valOf('zal-15-'+id));
+    var rRZ=parseLiczba(valOf('roz-rz-'+id));
+    var r15=parseLiczba(valOf('roz-15-'+id));
+    if(maWartosc('zal-rz-'+id) && isNaN(zRZ)) bledy.push('Produkt '+nr+': załadunek RZ – błędny format');
+    if(maWartosc('zal-15-'+id) && isNaN(z15)) bledy.push('Produkt '+nr+': załadunek 15°C – błędny format');
+    if(maWartosc('roz-rz-'+id) && isNaN(rRZ)) bledy.push('Produkt '+nr+': rozlane RZ – błędny format');
+    if(maWartosc('roz-15-'+id) && isNaN(r15)) bledy.push('Produkt '+nr+': rozlane 15°C – błędny format');
     if(!isNaN(zRZ)&&zRZ<=0) bledy.push('Produkt '+nr+': załadunek RZ musi być większy niż 0');
     if(!isNaN(z15)&&z15<=0) bledy.push('Produkt '+nr+': załadunek 15°C musi być większy niż 0');
     if(!isNaN(rRZ)&&rRZ<0) bledy.push('Produkt '+nr+': rozlane RZ nie może być ujemne');
     if(!isNaN(r15)&&r15<0) bledy.push('Produkt '+nr+': rozlane 15°C nie może być ujemne');
-    if(!isNaN(zRZ)&&!isNaN(rRZ)&&rRZ>zRZ) bledy.push('Produkt '+nr+': rozlane RZ ('+rRZ+') > załadunek RZ ('+zRZ+') – niemożliwe');
-    if(!isNaN(z15)&&!isNaN(r15)&&r15>z15) bledy.push('Produkt '+nr+': rozlane 15°C ('+r15+') > załadunek 15°C ('+z15+') – niemożliwe');
+    // UWAGA: rozlane > załadunek NIE jest błędem - dla niektórych programów
+    // jest to normalna sytuacja, oznaczana jako oszczędność / korzyść dla biura.
   });
   return bledy;
 }
@@ -1443,8 +1455,8 @@ function sprawdzUbytkiKrytyczne(){
     var pd=getProgData(pal,prog);
     if(!pd) return;
     var typ=pd.typ;
-    var zalU=typ==='15'?parseFloat(document.getElementById('zal-15-'+id).value):parseFloat(document.getElementById('zal-rz-'+id).value);
-    var rozU=typ==='15'?parseFloat(document.getElementById('roz-15-'+id).value):parseFloat(document.getElementById('roz-rz-'+id).value);
+    var zalU=typ==='15'?parseLiczba(valOf('zal-15-'+id)):parseLiczba(valOf('zal-rz-'+id));
+    var rozU=typ==='15'?parseLiczba(valOf('roz-15-'+id)):parseLiczba(valOf('roz-rz-'+id));
     if(isNaN(zalU)||isNaN(rozU)||zalU<=0) return;
     var ubytek=zalU-rozU;
     var procent=ubytek/zalU*100;
@@ -1471,20 +1483,20 @@ function zbudujPayload(powodyUbytkow){
   var data=document.getElementById('data').value;
   var wz=document.getElementById('wz').value.trim();
   var naftobaza=pobierzNaftobaze();
-  var kms=parseFloat(document.getElementById('kms').value);
-  var kmk=parseFloat(document.getElementById('kmk').value);
-  var km=kmk-kms;
+  var kms=parseLiczba(valOf('kms'));
+  var kmk=parseLiczba(valOf('kmk'));
+  var km=(!isNaN(kms)&&!isNaN(kmk))?kmk-kms:0;
   var produktyData=[];
   var ids=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
   // Stabilna kolejność produktów (po ID rosnąco = po kolejności dodawania)
   ids.sort(function(a,b){ return parseInt(a)-parseInt(b); });
   ids.forEach(function(id){
-    var pal=document.getElementById('pal-'+id).value;
+    var pal=valOf('pal-'+id);
     var prog=selectedProgs[id];
-    var zalRZ=parseFloat(document.getElementById('zal-rz-'+id).value)||0;
-    var zal15=parseFloat(document.getElementById('zal-15-'+id).value)||0;
-    var rozRZ=parseFloat(document.getElementById('roz-rz-'+id).value)||0;
-    var roz15=parseFloat(document.getElementById('roz-15-'+id).value)||0;
+    var zalRZ=parseLiczba(valOf('zal-rz-'+id))||0;
+    var zal15=parseLiczba(valOf('zal-15-'+id))||0;
+    var rozRZ=parseLiczba(valOf('roz-rz-'+id))||0;
+    var roz15=parseLiczba(valOf('roz-15-'+id))||0;
     var pd=getProgData(pal,prog);
     var wsp=pd?pd.wsp/100:0;
     var typ=pd?pd.typ:'RZ';
@@ -1494,17 +1506,22 @@ function zbudujPayload(powodyUbytkow){
     var norma=+(zalU*wsp).toFixed(2);
     var roznica=+(zalU-rozU).toFixed(2);
     var rozNetto=+(roznica-norma).toFixed(2);
-    // Status uwzględniający grawitację
+    // Nadwyżka: rozlane > załadunek (normalne dla niektórych programów)
+    var nadwyzka = (!isNaN(zalU) && !isNaN(rozU) && rozU > zalU);
+    var nadwyzkaIle = nadwyzka ? +(rozU-zalU).toFixed(2) : 0;
+    // Status uwzględniający grawitację i nadwyżkę
     var status;
-    if(grawitacja){
+    if(nadwyzka){
+      status = 'OSZCZĘDNOŚĆ – KORZYŚĆ DLA BIURA';
+    } else if(grawitacja){
       status = rozNetto<=0 ? 'OK – BEZ UBYTKÓW' : 'DO WYJAŚNIENIA';
     } else {
       status = rozNetto<0?'OSZCZĘDNOŚĆ':rozNetto<=10?'OK – W NORMIE':rozNetto<=50?'PONAD NORMĘ':'DUŻY UBYTEK';
     }
     var powodUbytku = powodyUbytkow && powodyUbytkow[id] ? powodyUbytkow[id] : '';
-    produktyData.push({nrProduktu:produktyData.length+1,paliwo:pal,program:prog,typProg:typ,grawitacja:grawitacja,zaladunek_RZ:zalRZ,zaladunek_15:zal15,rozlane_RZ:rozRZ,rozlane_15:roz15,normaUbytek:norma,roznica:roznica,roznicaNetto:rozNetto,status:status,powodUbytku:powodUbytku});
+    produktyData.push({nrProduktu:produktyData.length+1,paliwo:pal,program:prog,typProg:typ,grawitacja:grawitacja,zaladunek_RZ:zalRZ,zaladunek_15:zal15,rozlane_RZ:rozRZ,rozlane_15:roz15,normaUbytek:norma,roznica:roznica,roznicaNetto:rozNetto,status:status,powodUbytku:powodUbytku,nadwyzka:nadwyzka,nadwyzkaIle:nadwyzkaIle});
   });
-  var tankLitry=parseFloat(document.getElementById('tank-litry').value)||0;
+  var tankLitry=parseLiczba(valOf('tank-litry'))||0;
   var dystans=(kms>0&&kmk>kms)?(kmk-kms):0;
   var spalanie=tankLitry>0&&dystans>0?+(tankLitry/dystans*100).toFixed(2):null;
   var ts=Date.now();
@@ -1535,6 +1552,17 @@ function wyslij(){
   }
   valBox.style.display='none';
 
+  // Info o nadwyżkach (rozlane > załadunek) - normalna sytuacja, ale informujemy.
+  var nadwyzki=sprawdzNadwyzki();
+  if(nadwyzki.length){
+    var msg='ℹ️ Wykryto nadwyżkę paliwa:\n\n';
+    nadwyzki.forEach(function(n){
+      msg+='• '+n.produkt+': rozlane '+n.rozlane+' L > załadunek '+n.zaladunek+' L\n  (różnica: +'+n.nadwyzka+' L)\n';
+    });
+    msg+='\nWpis zostanie oznaczony jako OSZCZĘDNOŚĆ – KORZYŚĆ DLA BIURA.\nWysłać?';
+    if(!confirm(msg)) return;
+  }
+
   // Sprawdź ubytki krytyczne – jeśli są, pokaż modal z polami "powód"
   var ostrzezenia=sprawdzUbytkiKrytyczne();
   if(ostrzezenia.length){
@@ -1543,6 +1571,33 @@ function wyslij(){
   }
   // Brak ostrzeżeń – wysyłka bezpośrednia
   wyslijFinalnie(zbudujPayload({}));
+}
+
+// Wykrywa produkty, gdzie rozlane > załadunek (nadwyżka / oszczędność).
+function sprawdzNadwyzki(){
+  var wynik=[];
+  var ids=Object.keys(selectedProgs).filter(function(id){ return document.getElementById('produkt-'+id); });
+  ids.sort(function(a,b){ return parseInt(a)-parseInt(b); });
+  ids.forEach(function(id, idx){
+    var nrWyswietlany=idx+1;
+    var pal=valOf('pal-'+id);
+    var prog=selectedProgs[id];
+    var pd=getProgData(pal,prog);
+    if(!pd) return;
+    var typ=pd.typ;
+    var zalU=typ==='15'?parseLiczba(valOf('zal-15-'+id)):parseLiczba(valOf('zal-rz-'+id));
+    var rozU=typ==='15'?parseLiczba(valOf('roz-15-'+id)):parseLiczba(valOf('roz-rz-'+id));
+    if(isNaN(zalU)||isNaN(rozU)) return;
+    if(rozU>zalU){
+      wynik.push({
+        produkt:'Produkt '+nrWyswietlany+' ('+pal+', program '+prog+', typ '+typ+')',
+        zaladunek:zalU,
+        rozlane:rozU,
+        nadwyzka:+(rozU-zalU).toFixed(2)
+      });
+    }
+  });
+  return wynik;
 }
 
 function pokazUbytekModal(ostrzezenia){
