@@ -2397,7 +2397,299 @@ document.addEventListener('DOMContentLoaded',function(){
   try{ renderMail(); }catch(e){ console.log('err:',e); }
   try{ sprawdzRoboczy(); }catch(e){}
   try{ pokazSetupJesliPotrzeba(); }catch(e){ console.log('setup:',e); }
+  // Backend Cysterna - inicjalizacja po załadowaniu apki
+  try{ CysternaBackend.init(); }catch(e){ console.log('backend init:',e); }
 });
+
+// ============================================================
+// MODUŁ: CysternaBackend
+// ============================================================
+// Dodany 7.05.2026 (sesja 3.2)
+//
+// Ten moduł robi DWIE rzeczy:
+//   1. Logowanie kierowcy PIN-em (na 30 dni, jak Allegro)
+//   2. Podwójny zapis: każda trasa idzie do BACKENDU + Google Sheets
+//
+// Stary kod apki nic nie wie o tym module. Działa jak przedtem.
+// Tu tylko "podpinamy się" do funkcji safeFetch i kopiujemy dane do backendu.
+// ============================================================
+
+var CysternaBackend = (function(){
+  'use strict';
+
+  var BACKEND_URL = 'https://cysterna-backend-production.up.railway.app';
+  var TOKEN_KEY   = 'cysterna_token';
+  var USER_KEY    = 'cysterna_user_v2';
+
+  // ---- HELPERY storage (z fallbackiem do pamięci) ----
+  var _mem = {};
+  function _ls(k, v) {
+    try {
+      if (v === undefined) return localStorage.getItem(k);
+      if (v === null) { localStorage.removeItem(k); return; }
+      localStorage.setItem(k, v);
+    } catch(e) {
+      if (v === undefined) return _mem[k] || null;
+      if (v === null) { delete _mem[k]; return; }
+      _mem[k] = v;
+    }
+  }
+
+  // ---- TOKEN ----
+  function getToken() { return _ls(TOKEN_KEY); }
+  function setToken(t) { _ls(TOKEN_KEY, t || null); }
+  function getUser() {
+    var u = _ls(USER_KEY);
+    try { return u ? JSON.parse(u) : null; } catch(e) { return null; }
+  }
+  function setUser(u) { _ls(USER_KEY, u ? JSON.stringify(u) : null); }
+
+  // ---- API: request z timeout-em ----
+  function request(method, path, body) {
+    var headers = { 'Content-Type': 'application/json' };
+    var token = getToken();
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    var ctrl = new AbortController();
+    var timeoutId = setTimeout(function(){ ctrl.abort(); }, 20000);
+
+    var opts = {
+      method: method,
+      headers: headers,
+      mode: 'cors',
+      credentials: 'omit',
+      signal: ctrl.signal
+    };
+    if (body) opts.body = JSON.stringify(body);
+
+    return fetch(BACKEND_URL + path, opts).then(function(res){
+      clearTimeout(timeoutId);
+      return res.text().then(function(text){
+        var data = null;
+        if (text) { try { data = JSON.parse(text); } catch(e){ data = {raw:text}; } }
+        if (res.ok) return data;
+        if (res.status === 401) { setToken(null); setUser(null); }
+        var err = new Error((data && data.error) || ('HTTP ' + res.status));
+        err.status = res.status;
+        err.data = data;
+        throw err;
+      });
+    }, function(err){
+      clearTimeout(timeoutId);
+      var e = new Error('Brak połączenia z serwerem');
+      e.networkError = true;
+      throw e;
+    });
+  }
+
+  // ---- LOGOWANIE ----
+  function loginPin(pin) {
+    return request('POST', '/api/auth/login-pin', { pin: String(pin).trim() })
+      .then(function(data){
+        setToken(data.token);
+        setUser(data.user);
+        return data;
+      });
+  }
+
+  function logout() {
+    setToken(null); setUser(null);
+    pokazEkranLogowania();
+  }
+
+  function isLoggedIn() { return !!getToken(); }
+
+  // ---- MAPOWANIE: stary payload -> nowy format backendu ----
+  function mapujPayload(stary) {
+    var produkty = (stary.produkty || []).map(function(p){
+      return {
+        fuel_type: p.paliwo || null,
+        program: p.program || null,
+        load_liters_rz: p.zaladunek_RZ || null,
+        load_liters_15c: p.zaladunek_15 || null,
+        poured_liters_rz: p.rozlane_RZ || null,
+        poured_liters_15c: p.rozlane_15 || null
+      };
+    });
+
+    // Notatki - sklejamy info o ubytkach i nadwyżkach z produktów
+    var notatki = [];
+    (stary.produkty || []).forEach(function(p){
+      if (p.powodUbytku) notatki.push('[' + p.paliwo + '] Powód ubytku: ' + p.powodUbytku);
+      if (p.nadwyzka) notatki.push('[' + p.paliwo + '] Nadwyżka ' + p.nadwyzkaIle + 'L (oszczędność)');
+      if (p.status === 'DUŻY UBYTEK' || p.status === 'PONAD NORMĘ') {
+        notatki.push('[' + p.paliwo + '] STATUS: ' + p.status + ' (różnica netto: ' + p.roznicaNetto + 'L)');
+      }
+    });
+
+    var tank = stary.tankowanie || {};
+    return {
+      trip_date: stary.data,
+      truck_registration: stary.ciagnik || null,
+      trailer_registration: stary.naczepa || null,
+      wz_number: stary.wz || null,
+      naftobaza: stary.naftobaza || null,
+      km_start: stary.kmStart || null,
+      km_end: stary.kmKoniec || null,
+      tank_liters: tank.litry || null,
+      tank_km: tank.dystansKm || null,
+      consumption: tank.spalanieL100km || null,
+      notes: notatki.length ? notatki.join('\n') : null,
+      driver_name: stary.kierowca || null,
+      products: produkty
+    };
+  }
+
+  // ---- WYSYŁKA TRASY do backendu ----
+  function wyslijTrase(staryPayload) {
+    if (!isLoggedIn()) {
+      console.warn('[Backend] Nie zalogowany - pomijam wysyłkę do bazy');
+      return Promise.reject(new Error('Nie zalogowany'));
+    }
+    var nowyPayload = mapujPayload(staryPayload);
+    return request('POST', '/api/trips', nowyPayload);
+  }
+
+  // ============================================================
+  // EKRAN LOGOWANIA
+  // ============================================================
+
+  function pokazEkranLogowania() {
+    var existing = document.getElementById('backend-login');
+    if (existing) { existing.style.display = 'flex'; return; }
+
+    var html = ''
+      + '<div id="backend-login" style="position:fixed;inset:0;background:#0f1f3d;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;color:#fff;font-family:Barlow,sans-serif;">'
+      + '  <div style="font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;letter-spacing:3px;color:#fff;margin-bottom:8px;">CYSTERNA</div>'
+      + '  <div style="color:#94a3b8;font-size:14px;margin-bottom:30px;">Zaloguj się PIN-em</div>'
+      + '  <div id="backend-login-msg" style="color:#fbbf24;font-size:14px;margin-bottom:14px;min-height:20px;text-align:center;"></div>'
+      + '  <div id="backend-login-pin" style="background:#1e3a8a;padding:18px 24px;border-radius:14px;font-size:32px;letter-spacing:18px;font-weight:700;min-width:180px;text-align:center;margin-bottom:24px;border:2px solid #3b82f6;">____</div>'
+      + '  <div style="display:grid;grid-template-columns:repeat(3,80px);gap:10px;">'
+      +     [1,2,3,4,5,6,7,8,9].map(function(n){
+              return '<button onclick="CysternaBackend._pin('+n+')" style="background:#1e3a8a;border:2px solid #3b82f6;color:#fff;font-size:24px;font-weight:700;padding:18px;border-radius:12px;cursor:pointer;font-family:Barlow,sans-serif;">'+n+'</button>';
+            }).join('')
+      + '    <button onclick="CysternaBackend._pinClear()" style="background:#7f1d1d;border:2px solid #ef4444;color:#fff;font-size:18px;font-weight:700;padding:18px;border-radius:12px;cursor:pointer;font-family:Barlow,sans-serif;">C</button>'
+      + '    <button onclick="CysternaBackend._pin(0)" style="background:#1e3a8a;border:2px solid #3b82f6;color:#fff;font-size:24px;font-weight:700;padding:18px;border-radius:12px;cursor:pointer;font-family:Barlow,sans-serif;">0</button>'
+      + '    <button onclick="CysternaBackend._pinBack()" style="background:#475569;border:2px solid #64748b;color:#fff;font-size:18px;font-weight:700;padding:18px;border-radius:12px;cursor:pointer;font-family:Barlow,sans-serif;">⌫</button>'
+      + '  </div>'
+      + '  <div style="margin-top:24px;font-size:11px;color:#64748b;text-align:center;max-width:280px;">Zalogowanie zapamięta Cię na 30 dni. Nie musisz wpisywać PIN-u przy każdej trasie.</div>'
+      + '</div>';
+
+    var div = document.createElement('div');
+    div.innerHTML = html;
+    document.body.appendChild(div.firstChild);
+  }
+
+  function ukryjEkranLogowania() {
+    var el = document.getElementById('backend-login');
+    if (el) el.style.display = 'none';
+  }
+
+  // PIN buffer
+  var _pinBuf = '';
+  function _renderPin() {
+    var el = document.getElementById('backend-login-pin');
+    if (!el) return;
+    var s = _pinBuf + '____'.slice(_pinBuf.length);
+    el.textContent = s.split('').join(' ');
+  }
+  function _setMsg(msg, color) {
+    var el = document.getElementById('backend-login-msg');
+    if (el) { el.textContent = msg || ''; el.style.color = color || '#fbbf24'; }
+  }
+
+  function _pin(n) {
+    if (_pinBuf.length >= 4) return;
+    _pinBuf += String(n);
+    _renderPin();
+    _setMsg('');
+    if (_pinBuf.length === 4) _spr();
+  }
+  function _pinClear() { _pinBuf = ''; _renderPin(); _setMsg(''); }
+  function _pinBack() { _pinBuf = _pinBuf.slice(0, -1); _renderPin(); _setMsg(''); }
+
+  function _spr() {
+    var pin = _pinBuf;
+    _setMsg('⏳ Sprawdzam...', '#94a3b8');
+    loginPin(pin).then(function(data){
+      _setMsg('✅ Witaj ' + (data.user.full_name || data.user.username) + '!', '#22c55e');
+      setTimeout(function(){
+        ukryjEkranLogowania();
+        odswiezPasekZalogowanego();
+        _pinBuf = '';
+      }, 800);
+    }).catch(function(err){
+      _setMsg('❌ ' + (err.message || 'Błąd logowania'), '#fca5a5');
+      _pinBuf = '';
+      _renderPin();
+    });
+  }
+
+  // ============================================================
+  // PASEK INFO O ZALOGOWANYM (na górze)
+  // ============================================================
+  function odswiezPasekZalogowanego() {
+    var existing = document.getElementById('backend-user-bar');
+    if (existing) existing.remove();
+
+    var user = getUser();
+    if (!user) return;
+
+    var bar = document.createElement('div');
+    bar.id = 'backend-user-bar';
+    bar.style.cssText = 'background:#065f46;color:#fff;padding:6px 12px;text-align:center;font-size:12px;font-family:Barlow,sans-serif;border-bottom:2px solid #047857;';
+    bar.innerHTML = '🔐 Zalogowany: <strong>' + (user.full_name || user.username) + '</strong> · <a href="javascript:CysternaBackend.logout()" style="color:#a7f3d0;">Wyloguj</a>';
+    document.body.insertBefore(bar, document.body.firstChild);
+  }
+
+  // ============================================================
+  // INICJALIZACJA - wywoływana po załadowaniu apki
+  // ============================================================
+  function init() {
+    if (!isLoggedIn()) {
+      pokazEkranLogowania();
+    } else {
+      odswiezPasekZalogowanego();
+      // Sprawdź czy token jeszcze ważny
+      request('GET', '/api/auth/me').catch(function(err){
+        if (err.status === 401) {
+          setToken(null); setUser(null);
+          pokazEkranLogowania();
+        }
+      });
+    }
+
+    // PODPINAMY SIĘ do safeFetch - po wysłaniu do Sheetsa, wysyłamy też do backendu
+    if (typeof safeFetch === 'function') {
+      var origSafeFetch = safeFetch;
+      window.safeFetch = function(payload) {
+        // Wysyłamy do Sheetsa (jak dotychczas)
+        var sheetsPromise = origSafeFetch(payload);
+        // Równolegle do backendu (błąd nie blokuje sukcesu Sheetsa)
+        wyslijTrase(payload).then(function(res){
+          console.log('[Backend] Trasa zapisana w bazie, ID:', res && res.id);
+        }).catch(function(err){
+          console.warn('[Backend] Błąd zapisu w bazie (Sheets nadal działa):', err.message);
+        });
+        return sheetsPromise;
+      };
+    }
+  }
+
+  // PUBLIC API
+  return {
+    init: init,
+    loginPin: loginPin,
+    logout: logout,
+    isLoggedIn: isLoggedIn,
+    getUser: getUser,
+    wyslijTrase: wyslijTrase,
+    _pin: _pin,
+    _pinClear: _pinClear,
+    _pinBack: _pinBack
+  };
+})();
+
 </script>
 </body>
 </html>
