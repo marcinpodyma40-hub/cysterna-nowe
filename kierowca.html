@@ -113,6 +113,7 @@ input[type=file]{display:none;}
 <div class="offline-bar" id="offline-bar">⚠️ BRAK INTERNETU – dane zapisane lokalnie, wyślemy automatycznie gdy wróci zasięg</div>
 <div class="backup-bar" id="backup-bar" onclick="zrobBackupTeraz()">🔔 <b>PORA NA BACKUP FINANSÓW</b><small>Kliknij aby pobrać plik – potem wyślij go mailem do siebie</small></div>
 <div class="draft-bar" id="draft-bar" onclick="wczytajRoboczy()">📝 Masz niezapisany wpis – kliknij aby wczytać</div>
+<div id="foto-przypomnienie-bar" style="display:none;background:linear-gradient(90deg,#ea580c,#f97316);color:#fff;text-align:center;padding:10px 8px;font-weight:700;font-size:13px;cursor:pointer;line-height:1.4;" onclick="goTab('foto')"></div>
 
 <div class="bar">
   <div class="bar-title">🚛 CYSTERNA<span>.</span>APP</div>
@@ -120,6 +121,7 @@ input[type=file]{display:none;}
     <button class="tab-btn active" onclick="goTab('form')" id="tb-form">📋 Trasa</button>
     <button class="tab-btn" onclick="goTab('hist')" id="tb-hist">📜 Historia</button>
     <button class="tab-btn" onclick="goTab('mail')" id="tb-mail">📧 Poczta</button>
+<button class="tab-btn" onclick="goTab('foto')" id="tb-foto">📷 Zdjęcia</button>
   </div>
 </div>
 <!-- FORMULARZ -->
@@ -216,6 +218,11 @@ input[type=file]{display:none;}
     <button class="btn-sm" style="background:#fee2e2;color:#b91c1c;" onclick="wyczyscHistorie()">🗑️ Wyczyść</button>
   </div>
   <div id="historia-list"><p style="color:#94a3b8;text-align:center;padding:30px;">Wybierz kierowcę powyżej</p></div>
+</div>
+
+<!-- ZDJĘCIA TRAS -->
+<div class="page" id="tab-foto">
+  <div id="tab-foto-content"></div>
 </div>
 
 <!-- POCZTA -->
@@ -779,7 +786,7 @@ var aktywnyKierowca=null;
 
 function goTab(t){
   if(t==='admin') return; // wersja kierowcy – nie ma Biura
-  ['form','hist','mail'].forEach(function(n){
+  ['form','hist','mail','foto'].forEach(function(n){
     var pane=document.getElementById('tab-'+n);
     var btn=document.getElementById('tb-'+n);
     if(pane) pane.classList.remove('active');
@@ -790,7 +797,15 @@ function goTab(t){
   if(t==='hist'){
     renderHistoriaKierowcy();
   }
+  if(t==='foto'){
+    var cont=document.getElementById('tab-foto-content');
+    if(cont && !cont.dataset.zaladowane){
+      try{ cont.innerHTML = CysternaPhotos.ekran(); cont.dataset.zaladowane='1'; }catch(e){ console.log('foto ekran:',e); }
+    }
+    try{ CysternaPhotos.aktywuj(); }catch(e){ console.log('foto aktywuj:',e); }
+  }
 }
+  
 function sprawdzHaslo(){ /* niedostępne w wersji kierowcy */ }
 function anulujBiuro(){ /* niedostępne w wersji kierowcy */ }
 
@@ -2690,6 +2705,38 @@ var CysternaBackend = (function(){
   };
 })();
 
+</script>
+
+<!-- Moduł zdjęć (osobny plik) -->
+<script src="photos.js"></script>
+<script>
+  // Po załadowaniu apki - sprawdź czy są trasy bez zdjęć (dla pomarańczowego paska)
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      try {
+        if (typeof CysternaPhotos !== 'undefined' && typeof CysternaBackend !== 'undefined' && CysternaBackend.isLoggedIn && CysternaBackend.isLoggedIn()) {
+          fetch('https://cysterna-backend-production.up.railway.app/api/trips?limit=20', {
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('cysterna_token') }
+          }).then(function(r){ return r.json(); }).then(function(json){
+            if (json && json.data) {
+              var dzis = new Date(); dzis.setHours(0,0,0,0);
+              var bez = json.data.filter(function(t){
+                if (!t.trip_date) return false;
+                var d = new Date(t.trip_date); d.setHours(0,0,0,0);
+                if (d.getTime() !== dzis.getTime()) return false;
+                return !(t.photo_wz_url && t.photo_paragon_url);
+              }).length;
+              var bar = document.getElementById('foto-przypomnienie-bar');
+              if (bar && bez > 0) {
+                bar.innerHTML = '⚠️ Masz <b>'+bez+' '+(bez===1?'trasę':(bez<5?'trasy':'tras'))+' z dziś bez kompletu zdjęć</b> · Kliknij aby uzupełnić';
+                bar.style.display = 'block';
+              }
+            }
+          }).catch(function(){});
+        }
+      } catch(e) { console.log('foto init:',e); }
+    }, 2000);
+  });
 </script>
 </body>
 </html>
