@@ -120,7 +120,7 @@ input[type=file]{display:none;}
   <div class="tabs">
     <button class="tab-btn active" onclick="goTab('form')" id="tb-form">📋 Trasa</button>
     <button class="tab-btn" onclick="goTab('hist')" id="tb-hist">📜 Historia</button>
-    <button class="tab-btn" onclick="goTab('mail')" id="tb-mail">📧 Poczta</button>
+   <button class="tab-btn" onclick="goTab('mail')" id="tb-mail" style="display:none;">📧 Poczta</button>
 <button class="tab-btn" onclick="goTab('foto')" id="tb-foto">📷 Zdjęcia</button>
   </div>
 </div>
@@ -171,9 +171,18 @@ input[type=file]{display:none;}
 
     <div class="card" style="border-left:4px solid #f59e0b;">
       <div class="card-title">⛽ Tankowanie pojazdu</div>
-      <label style="margin-top:0">Zatankowano (litry)</label>
-      <input type="text" id="tank-litry" placeholder="0.00" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="obliczSpalanie();zapiszRoboczy()">
+      <div class="row2">
+        <div><label style="margin-top:0">Zatankowano (litry)</label>
+          <input type="text" id="tank-litry" placeholder="0.00" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="obliczSpalanie();zapiszRoboczy()"></div>
+        <div><label style="margin-top:0">Stan licznika (km)</label>
+          <input type="text" id="tank-stan-licznika" placeholder="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off" oninput="zapiszRoboczy()"></div>
+      </div>
       <p style="font-size:11px;color:#64748b;margin-top:4px;">💡 Spalanie liczy się automatycznie z różnicy Km start ↔ Km koniec</p>
+      <div id="spalanie-wynik" style="display:none;" class="stat-box">
+        <div class="stat-lab">Spalanie</div>
+        <div class="stat-val" id="spal-val">–</div>
+      </div>
+    </div>
       <div id="spalanie-wynik" style="display:none;" class="stat-box">
         <div class="stat-lab">Spalanie</div>
         <div class="stat-val" id="spal-val">–</div>
