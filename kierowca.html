@@ -1599,7 +1599,7 @@ function wyslijFinalnie(payload){
 }
 
 function resetForm(){
-  ['kierowca','ciagnik','naczepa','wz','kms','kmk','tank-litry','naftobaza','naftobaza-inna'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['kierowca','ciagnik','naczepa','wz','kms','kmk','tank-litry','tank-stan-licznika','naftobaza','naftobaza-inna'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('naftobaza-inna').style.display='none';
   document.getElementById('naczepa-wrap').style.display='none';
   document.getElementById('btn-dodaj-przyczepe').style.display='block';
