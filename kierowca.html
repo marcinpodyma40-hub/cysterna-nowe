@@ -1035,6 +1035,7 @@ function otworzEdycje(idx){
   document.getElementById('edit-kms').value=h.kmStart||'';
   document.getElementById('edit-kmk').value=h.kmKoniec||'';
   document.getElementById('edit-tank-litry').value=(h.tankowanie&&h.tankowanie.litry)||'';
+  document.getElementById('edit-tank-stan-licznika').value=(h.tankowanie&&h.tankowanie.stanLicznika)||'';
   var pb=document.getElementById('edit-produkty-box'); pb.innerHTML='';
   (h.produkty||[]).forEach(function(p,pi){
     var sec=document.createElement('div'); sec.className='card'; sec.style.borderLeft='4px solid #2563eb'; sec.style.marginTop='12px';
