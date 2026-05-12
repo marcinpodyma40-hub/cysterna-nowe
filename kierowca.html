@@ -1434,6 +1434,7 @@ function zbudujPayload(powodyUbytkow){
     produktyData.push({nrProduktu:produktyData.length+1,paliwo:pal,program:prog,typProg:typ,grawitacja:grawitacja,zaladunek_RZ:zalRZ,zaladunek_15:zal15,rozlane_RZ:rozRZ,rozlane_15:roz15,normaUbytek:norma,roznica:roznica,roznicaNetto:rozNetto,status:status,powodUbytku:powodUbytku,nadwyzka:nadwyzka,nadwyzkaIle:nadwyzkaIle});
   });
   var tankLitry=parseLiczba(valOf('tank-litry'))||0;
+  var tankStanLicznika=parseLiczba(valOf('tank-stan-licznika'))||0;
   var dystans=(kms>0&&kmk>kms)?(kmk-kms):0;
   var spalanie=tankLitry>0&&dystans>0?+(tankLitry/dystans*100).toFixed(2):null;
   var ts=Date.now();
@@ -1442,7 +1443,7 @@ function zbudujPayload(powodyUbytkow){
     kierowca:kierowca, ciagnik:ciagnik, naczepa:naczepa, pojazd:pojazd,
     data:data, wz:wz, naftobaza:naftobaza,
     kmStart:kms, kmKoniec:kmk, km:km,
-    tankowanie:{litry:tankLitry,dystansKm:dystans,spalanieL100km:spalanie},
+    tankowanie:{litry:tankLitry,dystansKm:dystans,spalanieL100km:spalanie,stanLicznika:tankStanLicznika},
     produkty:produktyData,
     ts:ts, wersja:1, koryguje_ts:null, czas_utworzenia:new Date().toISOString()
   };
