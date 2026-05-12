@@ -1085,6 +1085,7 @@ function zapiszEdycje(){
   var kms=parseLiczba(valOf('edit-kms'))||0;
   var kmk=parseLiczba(valOf('edit-kmk'))||0;
   var tankL=parseLiczba(valOf('edit-tank-litry'))||0;
+  var tankSL=parseLiczba(valOf('edit-tank-stan-licznika'))||0;
   var dystans=(kms>0&&kmk>kms)?(kmk-kms):0;
   var produkty=(oryg.produkty||[]).map(function(p,pi){
     var palEl=document.getElementById('ep-pal-'+pi);
@@ -1137,7 +1138,7 @@ function zapiszEdycje(){
     wz:document.getElementById('edit-wz').value,
     naftobaza:pobierzNaftobazeEdit(),
     kmStart:kms, kmKoniec:kmk, km:kmk-kms,
-    tankowanie:{litry:tankL,dystansKm:dystans,spalanieL100km:spalanie},
+    tankowanie:{litry:tankL,dystansKm:dystans,spalanieL100km:spalanie,stanLicznika:tankSL},
     produkty:produkty,
     ts:nowyTs,
     wersja:poprzedniaWersja+1,
