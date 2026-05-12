@@ -1204,7 +1204,7 @@ function obliczSpalanie(){
 }
 
 function dodajProdukt(){
-  if(liczAktywneProdukty()>=3){ alert('Maksymalnie 3 produkty!'); return; }
+  if(liczAktywneProdukty()>=5){ alert('Maksymalnie 5 produktów!'); return; }
   produktSeq++; var id=produktSeq; selectedProgs[id]=null;
   var nrWyswietlany=liczAktywneProdukty()+1; // numer porządkowy widoczny dla użytkownika (1,2,3)
   var div=document.createElement('div'); div.className='card'; div.id='produkt-'+id; div.style.borderLeft='4px solid #2563eb';
@@ -1228,14 +1228,14 @@ function dodajProdukt(){
     '<div><label style="margin-top:0">Litry 15°C *</label><input type="text" id="roz-15-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div></div></div>';
   document.getElementById('produkty').appendChild(div);
   odswiezNumeryProduktow();
-  if(liczAktywneProdukty()>=3) document.getElementById('btn-dodaj').style.display='none';
+  if(liczAktywneProdukty()>=5) document.getElementById('btn-dodaj').style.display='none';
 }
 function usunProdukt(id){
   var el=document.getElementById('produkt-'+id); if(el) el.remove();
   delete selectedProgs[id];
   // produktSeq nie zmniejszamy! to gwarantuje unikalność ID na zawsze
   odswiezNumeryProduktow();
-  if(liczAktywneProdukty()<3) document.getElementById('btn-dodaj').style.display='block';
+  if(liczAktywneProdukty()<5) document.getElementById('btn-dodaj').style.display='block';
   zapiszRoboczy();
 }
 // Aktualizuje widoczne dla kierowcy etykiety "PRODUKT 1, 2, 3" po usunięciu produktu
