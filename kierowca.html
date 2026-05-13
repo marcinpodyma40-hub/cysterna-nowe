@@ -627,13 +627,21 @@ function zapiszRoboczy(){
       var z15=document.getElementById('zal-15-'+id);
       var rrz=document.getElementById('roz-rz-'+id);
       var r15=document.getElementById('roz-15-'+id);
+      var ltrz=document.getElementById('load-temp-rz-'+id);
+      var lt15=document.getElementById('load-temp-15c-'+id);
+      var ptrz=document.getElementById('poured-temp-rz-'+id);
+      var pt15=document.getElementById('poured-temp-15c-'+id);
       produktyDraft.push({
         paliwo: pal?pal.value:'',
         program: selectedProgs[id]||null,
         zalRZ: zrz?zrz.value:'',
         zal15: z15?z15.value:'',
         rozRZ: rrz?rrz.value:'',
-        roz15: r15?r15.value:''
+        roz15: r15?r15.value:'',
+        tempZalRZ: ltrz?ltrz.value:'',
+        tempZal15: lt15?lt15.value:'',
+        tempRozRZ: ptrz?ptrz.value:'',
+        tempRoz15: pt15?pt15.value:''
       });
     });
     var d={
@@ -653,7 +661,8 @@ function zapiszRoboczy(){
     };
     // Zapisuj jeśli cokolwiek istotnego jest wpisane
     var hasProductData=produktyDraft.some(function(p){
-      return p.paliwo||p.program||p.zalRZ||p.zal15||p.rozRZ||p.roz15;
+      return p.paliwo||p.program||p.zalRZ||p.zal15||p.rozRZ||p.roz15
+        ||p.tempZalRZ||p.tempZal15||p.tempRozRZ||p.tempRoz15;
     });
     if(d.kierowca||d.ciagnik||d.wz||d.kms||d.kmk||hasProductData){
       lsSet('cysterna_roboczy',JSON.stringify(d));
@@ -704,6 +713,10 @@ function wczytajRoboczy(){
         var z15=document.getElementById('zal-15-'+id); if(z15) z15.value=p.zal15||'';
         var rrz=document.getElementById('roz-rz-'+id); if(rrz) rrz.value=p.rozRZ||'';
         var r15=document.getElementById('roz-15-'+id); if(r15) r15.value=p.roz15||'';
+        var ltrz=document.getElementById('load-temp-rz-'+id); if(ltrz) ltrz.value=p.tempZalRZ||'';
+        var lt15=document.getElementById('load-temp-15c-'+id); if(lt15) lt15.value=p.tempZal15||'';
+        var ptrz=document.getElementById('poured-temp-rz-'+id); if(ptrz) ptrz.value=p.tempRozRZ||'';
+        var pt15=document.getElementById('poured-temp-15c-'+id); if(pt15) pt15.value=p.tempRoz15||'';
       });
     }
     document.getElementById('draft-bar').classList.remove('show');
@@ -714,7 +727,8 @@ function sprawdzRoboczy(){
   try{
     var d=JSON.parse(lsGet('cysterna_roboczy')||'{}');
     var maProdukty = d.produkty && d.produkty.length && d.produkty.some(function(p){
-      return p.zalRZ||p.zal15||p.rozRZ||p.roz15||p.paliwo||p.program;
+      return p.zalRZ||p.zal15||p.rozRZ||p.roz15||p.paliwo||p.program
+        ||p.tempZalRZ||p.tempZal15||p.tempRozRZ||p.tempRoz15;
     });
     if(d.kierowca || d.wz || d.kms || d.kmk || maProdukty){
       document.getElementById('draft-bar').classList.add('show');
@@ -1043,7 +1057,9 @@ function otworzEdycje(idx){
       '<div class="row2"><div><label style="margin-top:0">Paliwo</label><select id="ep-pal-'+pi+'"><option value="ON"'+(p.paliwo==='ON'?' selected':'')+'>ON</option><option value="PB"'+(p.paliwo==='PB'?' selected':'')+'>PB95</option><option value="OP"'+(p.paliwo==='OP'?' selected':'')+'>Olej opałowy</option></select></div>'+
       '<div><label style="margin-top:0">Program</label><input type="text" id="ep-prog-'+pi+'" inputmode="numeric" pattern="[0-9]*" value="'+(p.program||'')+'"></div></div>'+
       '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Zał. RZ</label><input type="text" id="ep-zrz-'+pi+'" inputmode="decimal" pattern="[0-9.,]*" value="'+(p.zaladunek_RZ||0)+'"></div><div><label style="margin-top:0">Zał. 15°C</label><input type="text" id="ep-z15-'+pi+'" inputmode="decimal" pattern="[0-9.,]*" value="'+(p.zaladunek_15||0)+'"></div></div>'+
-      '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Roz. RZ</label><input type="text" id="ep-rrz-'+pi+'" inputmode="decimal" pattern="[0-9.,]*" value="'+(p.rozlane_RZ||0)+'"></div><div><label style="margin-top:0">Roz. 15°C</label><input type="text" id="ep-r15-'+pi+'" inputmode="decimal" pattern="[0-9.,]*" value="'+(p.rozlane_15||0)+'"></div></div>';
+      '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Temp. zał. RZ (°C)</label><input type="text" id="ep-ltrz-'+pi+'" inputmode="decimal" pattern="[-0-9.,]*" value="'+(p.temp_zaladunek_RZ!=null?p.temp_zaladunek_RZ:'')+'"></div><div><label style="margin-top:0">Temp. zał. 15°C (°C)</label><input type="text" id="ep-lt15-'+pi+'" inputmode="decimal" pattern="[-0-9.,]*" value="'+(p.temp_zaladunek_15!=null?p.temp_zaladunek_15:'')+'"></div></div>'+
+      '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Roz. RZ</label><input type="text" id="ep-rrz-'+pi+'" inputmode="decimal" pattern="[0-9.,]*" value="'+(p.rozlane_RZ||0)+'"></div><div><label style="margin-top:0">Roz. 15°C</label><input type="text" id="ep-r15-'+pi+'" inputmode="decimal" pattern="[0-9.,]*" value="'+(p.rozlane_15||0)+'"></div></div>'+
+      '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Temp. roz. RZ (°C)</label><input type="text" id="ep-ptrz-'+pi+'" inputmode="decimal" pattern="[-0-9.,]*" value="'+(p.temp_rozlane_RZ!=null?p.temp_rozlane_RZ:'')+'"></div><div><label style="margin-top:0">Temp. roz. 15°C (°C)</label><input type="text" id="ep-pt15-'+pi+'" inputmode="decimal" pattern="[-0-9.,]*" value="'+(p.temp_rozlane_15!=null?p.temp_rozlane_15:'')+'"></div></div>';
     pb.appendChild(sec);
   });
   document.getElementById('edit-modal').style.display='flex';
@@ -1094,12 +1110,21 @@ function zapiszEdycje(){
     var z15El=document.getElementById('ep-z15-'+pi);
     var rrzEl=document.getElementById('ep-rrz-'+pi);
     var r15El=document.getElementById('ep-r15-'+pi);
+    var ltrzEl=document.getElementById('ep-ltrz-'+pi);
+    var lt15El=document.getElementById('ep-lt15-'+pi);
+    var ptrzEl=document.getElementById('ep-ptrz-'+pi);
+    var pt15El=document.getElementById('ep-pt15-'+pi);
     var pal=palEl?palEl.value:p.paliwo;
     var prog=parseInt(progEl?progEl.value:p.program);
     var zRZ=parseLiczba(zrzEl?zrzEl.value:p.zaladunek_RZ)||0;
     var z15=parseLiczba(z15El?z15El.value:p.zaladunek_15)||0;
     var rRZ=parseLiczba(rrzEl?rrzEl.value:p.rozlane_RZ)||0;
     var r15=parseLiczba(r15El?r15El.value:p.rozlane_15)||0;
+    // Temperatury: 0 jest poprawne; pole puste -> null (legacy bez temp).
+    var ltRZ=parseLiczba(ltrzEl?ltrzEl.value:p.temp_zaladunek_RZ); if(isNaN(ltRZ)) ltRZ=null;
+    var lt15=parseLiczba(lt15El?lt15El.value:p.temp_zaladunek_15); if(isNaN(lt15)) lt15=null;
+    var ptRZ=parseLiczba(ptrzEl?ptrzEl.value:p.temp_rozlane_RZ); if(isNaN(ptRZ)) ptRZ=null;
+    var pt15=parseLiczba(pt15El?pt15El.value:p.temp_rozlane_15); if(isNaN(pt15)) pt15=null;
     var pd=getProgData(pal,prog);
     var wsp=pd?pd.wsp/100:0;
     var typ=pd?pd.typ:p.typProg;
@@ -1119,6 +1144,8 @@ function zapiszEdycje(){
     return {
       nrProduktu:pi+1, paliwo:pal, program:prog, typProg:typ, grawitacja:grawitacja,
       zaladunek_RZ:zRZ, zaladunek_15:z15, rozlane_RZ:rRZ, rozlane_15:r15,
+      temp_zaladunek_RZ:ltRZ, temp_zaladunek_15:lt15,
+      temp_rozlane_RZ:ptRZ, temp_rozlane_15:pt15,
       normaUbytek:norma, roznica:rozn, roznicaNetto:rozNetto, status:status,
       powodUbytku:p.powodUbytku||''
     };
@@ -1226,10 +1253,14 @@ function dodajProdukt(){
     '<label>Program rozlewania *</label><div class="prog-grid" id="progi-'+id+'"><p style="color:#94a3b8;font-size:13px;grid-column:1/-1;">Najpierw wybierz paliwo</p></div>'+
     '<div class="section-bg"><div class="section-label" style="color:#2563eb;">📋 Załadunek (z WZ)</div>'+
     '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="text" id="zal-rz-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
-    '<div><label style="margin-top:0">Litry 15°C *</label><input type="text" id="zal-15-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div></div></div>'+
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="text" id="zal-15-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div></div>'+
+    '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Temp. RZ * (°C)</label><input type="text" id="load-temp-rz-'+id+'" placeholder="0" inputmode="decimal" pattern="[-0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
+    '<div><label style="margin-top:0">Temp. 15°C * (°C)</label><input type="text" id="load-temp-15c-'+id+'" placeholder="0" inputmode="decimal" pattern="[-0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div></div></div>'+
     '<div class="section-bg" style="border-color:#fed7aa;"><div class="section-label" style="color:#ea580c;">🔧 Rozlane u klientów</div>'+
     '<div class="row2"><div><label style="margin-top:0">Litry RZ *</label><input type="text" id="roz-rz-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
-    '<div><label style="margin-top:0">Litry 15°C *</label><input type="text" id="roz-15-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div></div></div>';
+    '<div><label style="margin-top:0">Litry 15°C *</label><input type="text" id="roz-15-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div></div>'+
+    '<div class="row2" style="margin-top:8px;"><div><label style="margin-top:0">Temp. RZ * (°C)</label><input type="text" id="poured-temp-rz-'+id+'" placeholder="0" inputmode="decimal" pattern="[-0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
+    '<div><label style="margin-top:0">Temp. 15°C * (°C)</label><input type="text" id="poured-temp-15c-'+id+'" placeholder="0" inputmode="decimal" pattern="[-0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div></div></div>';
   document.getElementById('produkty').appendChild(div);
   odswiezNumeryProduktow();
   if(liczAktywneProdukty()>=5) document.getElementById('btn-dodaj').style.display='none';
@@ -1332,16 +1363,28 @@ function waliduj(){
     if(!maWartosc('zal-15-'+id)) bledy.push('Produkt '+nr+': załadunek 15°C');
     if(!maWartosc('roz-rz-'+id)) bledy.push('Produkt '+nr+': rozlane u klientów RZ');
     if(!maWartosc('roz-15-'+id)) bledy.push('Produkt '+nr+': rozlane u klientów 15°C');
+    if(!maWartosc('load-temp-rz-'+id)) bledy.push('Produkt '+nr+': temperatura załadunku RZ');
+    if(!maWartosc('load-temp-15c-'+id)) bledy.push('Produkt '+nr+': temperatura załadunku 15°C');
+    if(!maWartosc('poured-temp-rz-'+id)) bledy.push('Produkt '+nr+': temperatura rozładunku RZ');
+    if(!maWartosc('poured-temp-15c-'+id)) bledy.push('Produkt '+nr+': temperatura rozładunku 15°C');
     // Sanity checks – kompletne dane wymagane
     var zRZ=parseLiczba(valOf('zal-rz-'+id));
     var z15=parseLiczba(valOf('zal-15-'+id));
     var rRZ=parseLiczba(valOf('roz-rz-'+id));
     var r15=parseLiczba(valOf('roz-15-'+id));
+    var ltRZ=parseLiczba(valOf('load-temp-rz-'+id));
+    var lt15=parseLiczba(valOf('load-temp-15c-'+id));
+    var ptRZ=parseLiczba(valOf('poured-temp-rz-'+id));
+    var pt15=parseLiczba(valOf('poured-temp-15c-'+id));
     // Sprawdź czy wpisane wartości w ogóle dały się sparsować
     if(maWartosc('zal-rz-'+id) && isNaN(zRZ)) bledy.push('Produkt '+nr+': załadunek RZ – błędny format (użyj liczb i kropki/przecinka)');
     if(maWartosc('zal-15-'+id) && isNaN(z15)) bledy.push('Produkt '+nr+': załadunek 15°C – błędny format');
     if(maWartosc('roz-rz-'+id) && isNaN(rRZ)) bledy.push('Produkt '+nr+': rozlane RZ – błędny format');
     if(maWartosc('roz-15-'+id) && isNaN(r15)) bledy.push('Produkt '+nr+': rozlane 15°C – błędny format');
+    if(maWartosc('load-temp-rz-'+id) && isNaN(ltRZ)) bledy.push('Produkt '+nr+': temperatura załadunku RZ – błędny format');
+    if(maWartosc('load-temp-15c-'+id) && isNaN(lt15)) bledy.push('Produkt '+nr+': temperatura załadunku 15°C – błędny format');
+    if(maWartosc('poured-temp-rz-'+id) && isNaN(ptRZ)) bledy.push('Produkt '+nr+': temperatura rozładunku RZ – błędny format');
+    if(maWartosc('poured-temp-15c-'+id) && isNaN(pt15)) bledy.push('Produkt '+nr+': temperatura rozładunku 15°C – błędny format');
     if(!isNaN(zRZ)&&zRZ<=0) bledy.push('Produkt '+nr+': załadunek RZ musi być większy niż 0');
     if(!isNaN(z15)&&z15<=0) bledy.push('Produkt '+nr+': załadunek 15°C musi być większy niż 0');
     if(!isNaN(rRZ)&&rRZ<0) bledy.push('Produkt '+nr+': rozlane RZ nie może być ujemne');
@@ -1408,6 +1451,11 @@ function zbudujPayload(powodyUbytkow){
     var zal15=parseLiczba(valOf('zal-15-'+id))||0;
     var rozRZ=parseLiczba(valOf('roz-rz-'+id))||0;
     var roz15=parseLiczba(valOf('roz-15-'+id))||0;
+    // Temperatury: 0°C jest poprawną wartością, więc nie używamy ||0 (NaN -> null).
+    var tempZalRZ=parseLiczba(valOf('load-temp-rz-'+id)); if(isNaN(tempZalRZ)) tempZalRZ=null;
+    var tempZal15=parseLiczba(valOf('load-temp-15c-'+id)); if(isNaN(tempZal15)) tempZal15=null;
+    var tempRozRZ=parseLiczba(valOf('poured-temp-rz-'+id)); if(isNaN(tempRozRZ)) tempRozRZ=null;
+    var tempRoz15=parseLiczba(valOf('poured-temp-15c-'+id)); if(isNaN(tempRoz15)) tempRoz15=null;
     var pd=getProgData(pal,prog);
     var wsp=pd?pd.wsp/100:0;
     var typ=pd?pd.typ:'RZ';
@@ -1433,7 +1481,7 @@ function zbudujPayload(powodyUbytkow){
       status = rozNetto<0?'OSZCZĘDNOŚĆ':rozNetto<=10?'OK – W NORMIE':rozNetto<=50?'PONAD NORMĘ':'DUŻY UBYTEK';
     }
     var powodUbytku = powodyUbytkow && powodyUbytkow[id] ? powodyUbytkow[id] : '';
-    produktyData.push({nrProduktu:produktyData.length+1,paliwo:pal,program:prog,typProg:typ,grawitacja:grawitacja,zaladunek_RZ:zalRZ,zaladunek_15:zal15,rozlane_RZ:rozRZ,rozlane_15:roz15,normaUbytek:norma,roznica:roznica,roznicaNetto:rozNetto,status:status,powodUbytku:powodUbytku,nadwyzka:nadwyzka,nadwyzkaIle:nadwyzkaIle});
+    produktyData.push({nrProduktu:produktyData.length+1,paliwo:pal,program:prog,typProg:typ,grawitacja:grawitacja,zaladunek_RZ:zalRZ,zaladunek_15:zal15,rozlane_RZ:rozRZ,rozlane_15:roz15,temp_zaladunek_RZ:tempZalRZ,temp_zaladunek_15:tempZal15,temp_rozlane_RZ:tempRozRZ,temp_rozlane_15:tempRoz15,normaUbytek:norma,roznica:roznica,roznicaNetto:rozNetto,status:status,powodUbytku:powodUbytku,nadwyzka:nadwyzka,nadwyzkaIle:nadwyzkaIle});
   });
   var tankLitry=parseLiczba(valOf('tank-litry'))||0;
   var tankStanLicznika=parseLiczba(valOf('tank-stan-licznika'))||0;
@@ -2534,11 +2582,17 @@ var CysternaBackend = (function(){
     var produkty = (stary.produkty || []).map(function(p){
       return {
         fuel_type: p.paliwo || null,
-        program: p.program || null,
+        // Backend wymaga programu jako tekst (np. "15"), nie number.
+        program: (p.program==null||p.program==='') ? null : String(p.program),
         load_liters_rz: p.zaladunek_RZ || null,
         load_liters_15c: p.zaladunek_15 || null,
         poured_liters_rz: p.rozlane_RZ || null,
-        poured_liters_15c: p.rozlane_15 || null
+        poured_liters_15c: p.rozlane_15 || null,
+        // Temperatury: 0 jest poprawne, więc nie używamy ||null (zachowujemy literalne 0).
+        load_temp_rz: (p.temp_zaladunek_RZ==null) ? null : p.temp_zaladunek_RZ,
+        load_temp_15c: (p.temp_zaladunek_15==null) ? null : p.temp_zaladunek_15,
+        poured_temp_rz: (p.temp_rozlane_RZ==null) ? null : p.temp_rozlane_RZ,
+        poured_temp_15c: (p.temp_rozlane_15==null) ? null : p.temp_rozlane_15
       };
     });
 
