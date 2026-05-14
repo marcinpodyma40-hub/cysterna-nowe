@@ -11,6 +11,11 @@
 // pozostaja w arkuszu jako legacy - skrypt ich nie usuwa ani nie zapisuje. Mozna je
 // recznie ukryc/usunac z arkusza, bo dane produktowe sa teraz w "Produkty".
 
+// ID arkusza Cysterna - to samo co link w index.html / README.
+// Uzywamy openById zamiast getActiveSpreadsheet, zeby skrypt dzialal
+// niezaleznie od kontekstu uruchomienia (container-bound vs standalone).
+const SHEET_ID = '1PSgKxHIP-hN9-urvQ9CIBcGyMB_kMA-kFvWlg3TVX-8';
+
 const SHEET_TRIPS    = 'Wpisy';
 const SHEET_PRODUCTS = 'Produkty';
 
@@ -52,7 +57,7 @@ function ensureHeaders(sheet, requiredHeaders) {
     return requiredHeaders.slice();
   }
   const existing = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  const missing = requiredHeaders.filter(function(h) { return existing.indexOf(h) === -1; });
+  const missing = requiredHeaders.filter(h => !existing.includes(h));
   if (missing.length) {
     sheet.getRange(1, lastCol + 1, 1, missing.length).setValues([missing]);
     sheet.getRange(1, lastCol + 1, 1, missing.length)
@@ -65,16 +70,20 @@ function ensureHeaders(sheet, requiredHeaders) {
 // Mapuje slownik {naglowek -> wartosc} na tablice zgodna z biezaca kolejnoscia kolumn.
 // Klucze ktorych nie ma w sheetHeaders sa ignorowane, kolumny bez wartosci dostaja ''.
 function buildRow(sheetHeaders, dict) {
-  return sheetHeaders.map(function(h) {
-    if (!dict.hasOwnProperty(h)) return '';
+  return sheetHeaders.map(h => {
+    if (!Object.prototype.hasOwnProperty.call(dict, h)) return '';
     const v = dict[h];
     return (v === null || v === undefined) ? '' : v;
   });
 }
 
 function doPost(e) {
+  // Serializuje rownolegle wywolania web app - bez tego dwa POSTy moga
+  // przeplesc appendRow/setValues i rozjechac FK po Timestamp.
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = SpreadsheetApp.openById(SHEET_ID);
     const tripsSheet    = getOrCreateSheet(ss, SHEET_TRIPS);
     const productsSheet = getOrCreateSheet(ss, SHEET_PRODUCTS);
 
@@ -113,37 +122,42 @@ function doPost(e) {
       'Wprowadzający':      data.wprowadzajacy
     }));
 
-    // 2) Po jednym wierszu w "Produkty" na kazdy produkt; FK po Timestamp.
-    produkty.forEach(function(p, i) {
-      productsSheet.appendRow(buildRow(productsHeaders, {
-        'Timestamp':         data.ts,
-        'Nr produktu':       (p.nrProduktu != null) ? p.nrProduktu : (i + 1),
-        'Data':              data.data,
-        'Kierowca':          data.kierowca,
-        'Pojazd':            data.pojazd,
-        'Akcja':             akcja,
-        'Wersja':            wersja,
-        'Paliwo':            p.paliwo,
-        'Program':           p.program,                    // string (np. "15") po patchu w kierowca.html
-        'Typ programu':      p.typProg,
-        'Grawitacja':        p.grawitacja,
-        'Załadunek RZ [L]':       p.zaladunek_RZ,
-        'Załadunek 15°C [L]':     p.zaladunek_15,
-        'Wylew RZ [L]':           p.rozlane_RZ,
-        'Wylew 15°C [L]':         p.rozlane_15,
-        'Temp. załadunku RZ [°C]':   p.temp_zaladunek_RZ,
-        'Temp. załadunku 15°C [°C]': p.temp_zaladunek_15,
-        'Temp. wylewu RZ [°C]':      p.temp_rozlane_RZ,
-        'Temp. wylewu 15°C [°C]':    p.temp_rozlane_15,
-        'Norma ubytek [L]':       p.normaUbytek,
-        'Różnica [L]':            p.roznica,
-        'Różnica netto [L]':      p.roznicaNetto,
-        'Nadwyżka':               p.nadwyzka,
-        'Nadwyżka ile [L]':       p.nadwyzkaIle,
-        'Status':                 p.status,
-        'Powód ubytku':           p.powodUbytku
-      }));
-    });
+    // 2) Wiersze produktow batchem przez setValues - jeden zapis zamiast N.
+    // FK do "Wpisy" po kolumnie Timestamp.
+    if (produkty.length) {
+      const productRows = produkty.map((p, i) => buildRow(productsHeaders, {
+          'Timestamp':         data.ts,
+          'Nr produktu':       (p.nrProduktu != null) ? p.nrProduktu : (i + 1),
+          'Data':              data.data,
+          'Kierowca':          data.kierowca,
+          'Pojazd':            data.pojazd,
+          'Akcja':             akcja,
+          'Wersja':            wersja,
+          'Paliwo':            p.paliwo,
+          'Program':           p.program,                    // string (np. "15") po patchu w kierowca.html
+          'Typ programu':      p.typProg,
+          'Grawitacja':        p.grawitacja,
+          'Załadunek RZ [L]':       p.zaladunek_RZ,
+          'Załadunek 15°C [L]':     p.zaladunek_15,
+          'Wylew RZ [L]':           p.rozlane_RZ,
+          'Wylew 15°C [L]':         p.rozlane_15,
+          'Temp. załadunku RZ [°C]':   p.temp_zaladunek_RZ,
+          'Temp. załadunku 15°C [°C]': p.temp_zaladunek_15,
+          'Temp. wylewu RZ [°C]':      p.temp_rozlane_RZ,
+          'Temp. wylewu 15°C [°C]':    p.temp_rozlane_15,
+          'Norma ubytek [L]':       p.normaUbytek,
+          'Różnica [L]':            p.roznica,
+          'Różnica netto [L]':      p.roznicaNetto,
+          'Nadwyżka':               p.nadwyzka,
+          'Nadwyżka ile [L]':       p.nadwyzkaIle,
+          'Status':                 p.status,
+          'Powód ubytku':           p.powodUbytku
+        }));
+      const startRow = productsSheet.getLastRow() + 1;
+      productsSheet
+        .getRange(startRow, 1, productRows.length, productRows[0].length)
+        .setValues(productRows);
+    }
 
     return ContentService
       .createTextOutput(JSON.stringify({
@@ -156,6 +170,8 @@ function doPost(e) {
     return ContentService
       .createTextOutput(JSON.stringify({ result: 'error', msg: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
   }
 }
 
