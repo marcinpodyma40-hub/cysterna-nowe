@@ -114,6 +114,10 @@ input[type=file]{display:none;}
 <div class="backup-bar" id="backup-bar" onclick="zrobBackupTeraz()">🔔 <b>PORA NA BACKUP FINANSÓW</b><small>Kliknij aby pobrać plik – potem wyślij go mailem do siebie</small></div>
 <div class="draft-bar" id="draft-bar" onclick="wczytajRoboczy()">📝 Masz niezapisany wpis – kliknij aby wczytać</div>
 <div id="foto-przypomnienie-bar" style="display:none;background:linear-gradient(90deg,#ea580c,#f97316);color:#fff;text-align:center;padding:10px 8px;font-weight:700;font-size:13px;cursor:pointer;line-height:1.4;" onclick="goTab('foto')"></div>
+<div id="tryb-biuro-bar" style="display:none;background:linear-gradient(90deg,#ea580c,#f97316);color:#fff;padding:10px 12px;font-weight:700;font-size:13px;line-height:1.4;justify-content:space-between;align-items:center;gap:10px;">
+  <span>📋 TRYB ARCHIWALNY — wpisujesz dane z papieru</span>
+  <button type="button" onclick="wyjdzZTrybuBiura()" style="background:rgba(0,0,0,.25);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">🚪 Wyjdź</button>
+</div>
 
 <div class="bar">
   <div class="bar-title">🚛 CYSTERNA<span>.</span>APP</div>
@@ -164,12 +168,12 @@ input[type=file]{display:none;}
     </select>
     <input type="text" id="naftobaza-inna" placeholder="Wpisz nazwę naftobazy..." style="margin-top:8px;display:none;" oninput="zapiszRoboczy()">
 
-    <div class="row2" style="margin-top:14px;">
+    <div class="row2" style="margin-top:14px;" id="sekcja-km">
       <div><label style="margin-top:0">Km start *</label><input type="text" id="kms" placeholder="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off" oninput="obliczSpalanie();zapiszRoboczy()"></div>
       <div><label style="margin-top:0">Km koniec *</label><input type="text" id="kmk" placeholder="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off" oninput="obliczSpalanie();zapiszRoboczy()"></div>
     </div>
 
-    <div class="card" style="border-left:4px solid #f59e0b;">
+    <div class="card" style="border-left:4px solid #f59e0b;" id="sekcja-tank">
       <div class="card-title">⛽ Tankowanie pojazdu</div>
       <div class="row2">
         <div><label style="margin-top:0">Zatankowano (litry)</label>
@@ -349,6 +353,12 @@ input[type=file]{display:none;}
 // To samo dotyczy floty – kierowca może wprowadzić tylko własne pojazdy lub używać domyślnych.
 var DOMYSLNI_KIEROWCY = {}; // pusta – każdy kierowca dodaje siebie
 
+// ===== TRYB BIURA / ARCHIWALNY =====
+// Ukryty login dostępny przez 3× tap na pasek tytułu (po PIN-ie).
+// Zmień BIURO_PIN tutaj przed wdrożeniem produkcyjnym.
+var BIURO_PIN = '7842';
+var KIEROWCY_BIURO = ['Wojtek','Jakub','Szczepan','Wojciech','Marcin'];
+
 function getKierowcy(){
   try{
     var s=lsGet('cysterna_kierowcy');
@@ -486,7 +496,10 @@ function usunNaczepe(r){
 
 // ===== KIEROWCY – wypełnianie selectów i panel zarządzania =====
 function wypelnijSelectyKierowcow(){
-  var imiona=listaKierowcow();
+  // W trybie biura uzywamy zahardkodowanej listy 5 kierowcow (do wpisow archiwalnych
+  // wymagamy by biuro wybralo kto faktycznie jechal). Poza trybem biura - tylko
+  // imiona zarejestrowane lokalnie na tym telefonie (zwykle jedno).
+  var imiona = trybBiuro ? KIEROWCY_BIURO.slice() : listaKierowcow();
   ['kierowca','edit-kierowca','kalk-kierowca'].forEach(function(id){
     var sel=document.getElementById(id); if(!sel) return;
     var current=sel.value;
@@ -809,6 +822,7 @@ function wyslijOczekujace(){
 // ===== TABS =====
 var adminOdblokowany=false;
 var aktywnyKierowca=null;
+var trybBiuro=(lsGet('cysterna_tryb_biuro')==='1');
 
 function goTab(t){
   if(t==='admin') return; // wersja kierowcy – nie ma Biura
@@ -850,6 +864,18 @@ function pinDel(){ _pinBuf=_pinBuf.slice(0,-1); updatePinDots(); document.getEle
 function pinAnuluj(){ _pinBuf=''; _pinTarget=null; document.getElementById('pin-overlay').style.display='none'; }
 function updatePinDots(){ for(var i=0;i<4;i++){ var d=document.getElementById('pd-'+i); if(d) d.classList.toggle('filled',i<_pinBuf.length); } }
 function sprawdzPin(){
+  // Specjalny cel '__biuro__' przekierowuje weryfikacje do trybu biura (3x tap na pasek).
+  if(_pinTarget==='__biuro__'){
+    if(_pinBuf===BIURO_PIN){
+      document.getElementById('pin-overlay').style.display='none';
+      _pinBuf=''; _pinTarget=null;
+      wejdzWTrybBiura();
+    } else {
+      document.getElementById('pin-err').textContent='❌ Błędny PIN biura!';
+      _pinBuf=''; updatePinDots();
+    }
+    return;
+  }
   if(_pinBuf===getPin(_pinTarget)){
     document.getElementById('pin-overlay').style.display='none';
     aktywnyKierowca=_pinTarget; podswietlKierowce(_pinTarget); renderHistoria();
@@ -858,6 +884,56 @@ function sprawdzPin(){
     _pinBuf=''; updatePinDots();
   }
 }
+
+// ===== TRYB BIURA =====
+// Wejscie przez 3x tap na .bar-title -> modal PIN biura (overlay PIN z _pinTarget='__biuro__').
+// Po sukcesie wejdzWTrybBiura() zapisuje flage w localStorage i przeladowuje strone,
+// zeby applyTrybBiura() rozpostarl sie czysto na wszystkie hooki (banner, dropdown, data, foto).
+function otworzPinBiura(){
+  _pinTarget='__biuro__'; _pinBuf=''; updatePinDots();
+  document.getElementById('pin-title').textContent='🏢 BIURO';
+  document.getElementById('pin-subtitle').textContent='Podaj PIN biura';
+  document.getElementById('pin-err').textContent='';
+  document.getElementById('pin-overlay').style.display='flex';
+}
+function wejdzWTrybBiura(){
+  lsSet('cysterna_tryb_biuro','1');
+  alert('🏢 Tryb biura aktywny.\nWpisujesz teraz dane archiwalne (kierowca z listy, data wczorajsza lub starsza).');
+  location.reload();
+}
+function wyjdzZTrybuBiura(){
+  if(!confirm('Wyjść z trybu biura i wrócić do widoku kierowcy?')) return;
+  lsRemove('cysterna_tryb_biuro');
+  location.reload();
+}
+// Centralna funkcja: stosuje wszystkie UI zmiany trybu biura. Wywolywana z DOMContentLoaded.
+// Mozna ja wolac wielokrotnie idempotentnie (display:none/flex, max= ...).
+function applyTrybBiura(){
+  var bar = document.getElementById('tryb-biuro-bar');
+  if(bar) bar.style.display = trybBiuro ? 'flex' : 'none';
+  // W trybie biura ukrywamy pasek foto-przypomnienia (archiwum nigdy nie bedzie mialo zdjec).
+  var fotoBar = document.getElementById('foto-przypomnienie-bar');
+  if(fotoBar && trybBiuro) fotoBar.style.display='none';
+  // Sekcje Km / Tankowanie - z papieru nie mamy tych danych. W trybie biura ukrywamy.
+  var sekcjaKm = document.getElementById('sekcja-km');
+  var sekcjaTank = document.getElementById('sekcja-tank');
+  if(sekcjaKm)   sekcjaKm.style.display   = trybBiuro ? 'none' : '';
+  if(sekcjaTank) sekcjaTank.style.display = trybBiuro ? 'none' : '';
+  // Pole "Data trasy" - max=wczoraj w trybie biura (wymuszone na poziomie inputu).
+  var dataEl = document.getElementById('data');
+  if(dataEl){
+    if(trybBiuro){
+      var wcz = new Date(); wcz.setDate(wcz.getDate()-1);
+      // Format YYYY-MM-DD wymagany przez atrybut max.
+      var mm = String(wcz.getMonth()+1).padStart(2,'0');
+      var dd = String(wcz.getDate()).padStart(2,'0');
+      dataEl.setAttribute('max', wcz.getFullYear()+'-'+mm+'-'+dd);
+    } else {
+      dataEl.removeAttribute('max');
+    }
+  }
+}
+
 function podswietlKierowce(kto){
   var grid=document.getElementById('hist-kierowcy-grid');
   if(!grid) return;
@@ -1341,14 +1417,24 @@ function waliduj(){
   if(!valOf('kierowca')) bledy.push('Kierowca nie wybrany');
   if(!valOf('ciagnik')) bledy.push('Ciągnik nie wybrany');
   if(!valOf('data')) bledy.push('Data trasy');
+  // W trybie biura wymuszamy date z przeszlosci (max wczoraj), zeby przypadkiem
+  // nie pomieszac archiwalnego wpisu z biezacym wpisem kierowcy w terenie.
+  if(trybBiuro && valOf('data')){
+    var dWpis = new Date(valOf('data')+'T00:00:00');
+    var dDzis = new Date(); dDzis.setHours(0,0,0,0);
+    if(dWpis >= dDzis) bledy.push('Tryb archiwalny: data trasy musi być wczorajsza lub wcześniejsza');
+  }
   if(!valOf('wz').trim()) bledy.push('Nr dokumentu WZ');
   var nb=valOf('naftobaza');
   if(!nb) bledy.push('Naftobaza (miejsce załadunku)');
   else if(nb==='Inna' && !valOf('naftobaza-inna').trim()) bledy.push('Wpisz nazwę naftobazy');
   var kms=valOf('kms'), kmk=valOf('kmk');
-  if(!kms) bledy.push('Km start');
-  if(!kmk) bledy.push('Km koniec');
-  if(kms&&kmk&&parseLiczba(kmk)<parseLiczba(kms)) bledy.push('Km koniec musi być większy niż start');
+  // W trybie biura nie wymagamy km/tankowania (z papieru nie mamy tych danych).
+  if(!trybBiuro){
+    if(!kms) bledy.push('Km start');
+    if(!kmk) bledy.push('Km koniec');
+    if(kms&&kmk&&parseLiczba(kmk)<parseLiczba(kms)) bledy.push('Km koniec musi być większy niż start');
+  }
   var ids=Object.keys(selectedProgs);
   var aktywne=ids.filter(function(id){ return document.getElementById('produkt-'+id); });
   if(!aktywne.length) bledy.push('Dodaj przynajmniej jeden produkt');
@@ -1488,14 +1574,23 @@ function zbudujPayload(powodyUbytkow){
   var dystans=(kms>0&&kmk>kms)?(kmk-kms):0;
   var spalanie=tankLitry>0&&dystans>0?+(tankLitry/dystans*100).toFixed(2):null;
   var ts=Date.now();
-  // AUDIT TRAIL: każdy nowy wpis to wersja 1, brak korekty
+  // AUDIT TRAIL: każdy nowy wpis to wersja 1, brak korekty.
+  // W trybie biura znaczymy akcja:'ARCHIWUM' i wprowadzajacy:'biuro' - kierowca z dropdown
+  // wskazuje kto faktycznie jechal, wprowadzajacy mowi kto wprowadzal dane (audyt).
   return {
     kierowca:kierowca, ciagnik:ciagnik, naczepa:naczepa, pojazd:pojazd,
     data:data, wz:wz, naftobaza:naftobaza,
-    kmStart:kms, kmKoniec:kmk, km:km,
-    tankowanie:{litry:tankLitry,dystansKm:dystans,spalanieL100km:spalanie,stanLicznika:tankStanLicznika},
+    // W trybie biura nie zbieramy km ani tankowania (brak na papierze) - wysylamy null.
+    kmStart: trybBiuro ? null : kms,
+    kmKoniec: trybBiuro ? null : kmk,
+    km: trybBiuro ? null : km,
+    tankowanie: trybBiuro
+      ? {litry:null, dystansKm:null, spalanieL100km:null, stanLicznika:null}
+      : {litry:tankLitry, dystansKm:dystans, spalanieL100km:spalanie, stanLicznika:tankStanLicznika},
     produkty:produktyData,
-    ts:ts, wersja:1, koryguje_ts:null, czas_utworzenia:new Date().toISOString()
+    ts:ts, wersja:1, koryguje_ts:null, czas_utworzenia:new Date().toISOString(),
+    akcja: trybBiuro ? 'ARCHIWUM' : 'WPIS',
+    wprowadzajacy: trybBiuro ? 'biuro' : (aktywnyKierowca || kierowca || 'kierowca')
   };
 }
 
@@ -1653,7 +1748,10 @@ function resetForm(){
   document.getElementById('naftobaza-inna').style.display='none';
   document.getElementById('naczepa-wrap').style.display='none';
   document.getElementById('btn-dodaj-przyczepe').style.display='block';
-  document.getElementById('data').valueAsDate=new Date();
+  // W trybie biura data domyslnie = wczoraj (archiwalne wpisy nie moga byc dzisiejsze).
+  var dDataReset = new Date();
+  if(trybBiuro) dDataReset.setDate(dDataReset.getDate()-1);
+  document.getElementById('data').valueAsDate=dDataReset;
   document.getElementById('spalanie-wynik').style.display='none';
   document.getElementById('val-box').style.display='none';
   document.getElementById('produkty').innerHTML='';
@@ -2462,7 +2560,12 @@ function finResetuj(){
 
 // ===== START =====
 document.addEventListener('DOMContentLoaded',function(){
-  try{ document.getElementById('data').valueAsDate=new Date(); }catch(e){}
+  try{
+    // W trybie biura data trasy domyslnie = wczoraj (archiwum).
+    var dDataInit = new Date();
+    if(trybBiuro) dDataInit.setDate(dDataInit.getDate()-1);
+    document.getElementById('data').valueAsDate=dDataInit;
+  }catch(e){}
   try{ document.getElementById('zp-data').valueAsDate=new Date(); }catch(e){}
   try{ document.getElementById('tx-data').valueAsDate=new Date(); }catch(e){}
   try{ wypelnijSelectFloty(); }catch(e){ console.log('flota:',e); }
@@ -2477,6 +2580,26 @@ document.addEventListener('DOMContentLoaded',function(){
   try{ pokazSetupJesliPotrzeba(); }catch(e){ console.log('setup:',e); }
   // Backend Cysterna - inicjalizacja po załadowaniu apki
   try{ CysternaBackend.init(); }catch(e){ console.log('backend init:',e); }
+  // Tryb biura: zastosuj UI zmiany (banner, max-date itd.) + 3x tap na pasek tytulu
+  // jako ukryte wejscie. Tap z reset po 1s, by zwykle pojedyncze tapniecia nie sumowaly sie.
+  try{ applyTrybBiura(); }catch(e){ console.log('tryb biura:',e); }
+  try{
+    var title = document.querySelector('.bar-title');
+    if(title){
+      var _tt=0, _tttimer=null;
+      title.style.cursor='pointer';
+      title.addEventListener('click', function(){
+        _tt++;
+        clearTimeout(_tttimer);
+        _tttimer = setTimeout(function(){ _tt=0; }, 1000);
+        if(_tt>=3){
+          _tt=0; clearTimeout(_tttimer);
+          if(trybBiuro) wyjdzZTrybuBiura();
+          else otworzPinBiura();
+        }
+      });
+    }
+  }catch(e){ console.log('title tap:',e); }
 });
 
 // ============================================================

@@ -19,7 +19,7 @@ const HEADERS_TRIPS = [
   'Kierowca','Pojazd','Ciągnik','Naczepa','Nr WZ','Naftobaza',
   'Km start','Km koniec','Km trasa',
   'Tank litry','Tank stan licznika','Tank dystans km','Spalanie L/100km',
-  'Liczba produktów'
+  'Liczba produktów','Wprowadzający'
 ];
 
 const HEADERS_PRODUCTS = [
@@ -109,7 +109,8 @@ function doPost(e) {
       'Tank stan licznika': tank.stanLicznika,
       'Tank dystans km':    tank.dystansKm,
       'Spalanie L/100km':   tank.spalanieL100km,
-      'Liczba produktów':   produkty.length
+      'Liczba produktów':   produkty.length,
+      'Wprowadzający':      data.wprowadzajacy
     }));
 
     // 2) Po jednym wierszu w "Produkty" na kazdy produkt; FK po Timestamp.
