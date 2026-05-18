@@ -193,6 +193,14 @@ input[type=file]{display:none;}
       </div>
     </div>
 
+    <!-- ZALADUNKI NA NAFTOBAZIE - nowy model (commit 1 refactoru zal/rozl) -->
+    <div class="card" style="border-left:4px solid #2563eb;margin-top:14px;">
+      <div class="card-title">📋 ZAŁADUNKI NA NAFTOBAZIE</div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:8px;">Wpisz dane z dokumentu WZ PERN. Załadunek = cała cysterna (bez podziału na komory).</p>
+      <div id="zaladunki"></div>
+      <button class="btn-add" onclick="dodajZaladunek()" id="btn-dodaj-zaladunek">+ Dodaj produkt</button>
+    </div>
+
     <div id="produkty"></div>
     <button class="btn-add" onclick="dodajProdukt()" id="btn-dodaj">+ Dodaj produkt</button>
     <button class="btn" onclick="wyslij()" id="btn-wyslij">✓ WYŚLIJ DANE</button>
@@ -657,6 +665,18 @@ function zapiszRoboczy(){
         tempRoz15: pt15?pt15.value:''
       });
     });
+    // Dump nowych zaladunkow (nowy model - commit 1 refactoru)
+    var zaladunkiDraft=[];
+    var zalCards=document.querySelectorAll('#zaladunki .card[id^="zaladunek-"]');
+    Array.prototype.forEach.call(zalCards,function(card){
+      var zid=card.getAttribute('data-zid');
+      zaladunkiDraft.push({
+        paliwo: (document.getElementById('nz-paliwo-'+zid)||{}).value||'',
+        wz:     (document.getElementById('nz-wz-'+zid)||{}).value||'',
+        rz:     (document.getElementById('nz-rz-'+zid)||{}).value||'',
+        l15:    (document.getElementById('nz-15-'+zid)||{}).value||''
+      });
+    });
     var d={
       kierowca:document.getElementById('kierowca').value,
       ciagnik:document.getElementById('ciagnik').value,
@@ -670,6 +690,7 @@ function zapiszRoboczy(){
       tankLitry:document.getElementById('tank-litry').value,
       tankStanLicznika: document.getElementById('tank-stan-licznika').value,
       produkty:produktyDraft,
+      zaladunki:zaladunkiDraft,
       _ts:Date.now()
     };
     // Zapisuj jeśli cokolwiek istotnego jest wpisane
@@ -677,7 +698,10 @@ function zapiszRoboczy(){
       return p.paliwo||p.program||p.zalRZ||p.zal15||p.rozRZ||p.roz15
         ||p.tempZalRZ||p.tempZal15||p.tempRozRZ||p.tempRoz15;
     });
-    if(d.kierowca||d.ciagnik||d.wz||d.kms||d.kmk||hasProductData){
+    var hasZaladunki=zaladunkiDraft.some(function(z){
+      return z.paliwo||z.wz||z.rz||z.l15;
+    });
+    if(d.kierowca||d.ciagnik||d.wz||d.kms||d.kmk||hasProductData||hasZaladunki){
       lsSet('cysterna_roboczy',JSON.stringify(d));
       document.getElementById('draft-bar').classList.add('show');
     }
@@ -732,6 +756,18 @@ function wczytajRoboczy(){
         var pt15=document.getElementById('poured-temp-15c-'+id); if(pt15) pt15.value=p.tempRoz15||'';
       });
     }
+    // Restore nowych zaladunkow (nowy model - commit 1 refactoru zal/rozl)
+    if(d.zaladunki && d.zaladunki.length){
+      document.getElementById('zaladunki').innerHTML='';
+      d.zaladunki.forEach(function(z){
+        dodajZaladunek();
+        var zid=zaladunekSeq;
+        var palEl=document.getElementById('nz-paliwo-'+zid); if(palEl) palEl.value=z.paliwo||'';
+        var wzEl =document.getElementById('nz-wz-'+zid);     if(wzEl)  wzEl.value =z.wz||'';
+        var rzEl =document.getElementById('nz-rz-'+zid);     if(rzEl)  rzEl.value =z.rz||'';
+        var l15El=document.getElementById('nz-15-'+zid);     if(l15El) l15El.value=z.l15||'';
+      });
+    }
     document.getElementById('draft-bar').classList.remove('show');
     alert('✅ Wczytano zapisany wpis (włącznie z produktami).');
   }catch(e){ alert('⚠️ Nie udało się wczytać draftu: '+e.message); }
@@ -743,7 +779,10 @@ function sprawdzRoboczy(){
       return p.zalRZ||p.zal15||p.rozRZ||p.roz15||p.paliwo||p.program
         ||p.tempZalRZ||p.tempZal15||p.tempRozRZ||p.tempRoz15;
     });
-    if(d.kierowca || d.wz || d.kms || d.kmk || maProdukty){
+    var maZaladunki = d.zaladunki && d.zaladunki.length && d.zaladunki.some(function(z){
+      return z.paliwo||z.wz||z.rz||z.l15;
+    });
+    if(d.kierowca || d.wz || d.kms || d.kmk || maProdukty || maZaladunki){
       document.getElementById('draft-bar').classList.add('show');
     }
   }catch(e){}
@@ -1278,11 +1317,81 @@ function zapiszEdycje(){
   alert('✅ Korekta zapisana (wersja '+(poprzedniaWersja+1)+'). Oryginał pozostaje w historii.');
 }
 
+// ===== ZALADUNKI NA NAFTOBAZIE (nowy model - commit 1 refactoru zal/rozl) =====
+// Kazdy zaladunek = jeden produkt z WZ PERN: paliwo, nr WZ, ilosc RZ, ilosc 15C.
+// Bez programow i temperatur - to atrybuty rozladunku (commit 2).
+// Sekwencja ID monotoniczna (jak produktSeq) - chroni przed kolizja po usunieciu karty.
+var zaladunekSeq=0;
+
+function liczAktywneZaladunki(){
+  var box=document.getElementById('zaladunki');
+  if(!box) return 0;
+  return box.querySelectorAll('.card[id^="zaladunek-"]').length;
+}
+
+function dodajZaladunek(){
+  if(liczAktywneZaladunki()>=5){ alert('Maksymalnie 5 załadunków!'); return; }
+  zaladunekSeq++;
+  var id=zaladunekSeq;
+  var nrWyswietlany=liczAktywneZaladunki()+1;
+  var div=document.createElement('div');
+  div.className='card';
+  div.id='zaladunek-'+id;
+  div.style.borderLeft='4px solid #2563eb';
+  div.setAttribute('data-zid',id);
+  div.innerHTML='<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">'+
+      '<span class="zal-label">ZAŁADUNEK '+nrWyswietlany+'</span>'+
+      '<button class="btn-remove" onclick="usunZaladunek('+id+')">✕ Usuń</button>'+
+    '</div>'+
+    '<label style="margin-top:0">Produkt *</label>'+
+    '<select id="nz-paliwo-'+id+'" onchange="zapiszRoboczy()">'+
+      '<option value="">– wybierz –</option>'+
+      '<option value="ON">ON – Olej napędowy</option>'+
+      '<option value="PB">PB95 – Benzyna</option>'+
+      '<option value="OP">Olej opałowy</option>'+
+    '</select>'+
+    '<label>Nr WZ *</label>'+
+    '<input type="text" id="nz-wz-'+id+'" placeholder="np. WZ/2025/0123" autocomplete="off" oninput="zapiszRoboczy()">'+
+    '<div class="section-bg"><div class="section-label" style="color:#2563eb;">📦 Z WZ PERN</div>'+
+      '<div class="row2">'+
+        '<div><label style="margin-top:0">Ilość RZ [L] *</label>'+
+          '<input type="text" id="nz-rz-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
+        '<div><label style="margin-top:0">Ilość 15°C [L] *</label>'+
+          '<input type="text" id="nz-15-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
+      '</div>'+
+    '</div>';
+  document.getElementById('zaladunki').appendChild(div);
+  odswiezNumeryZaladunkow();
+  if(liczAktywneZaladunki()>=5){
+    document.getElementById('btn-dodaj-zaladunek').style.display='none';
+  }
+}
+
+function usunZaladunek(id){
+  var el=document.getElementById('zaladunek-'+id);
+  if(el) el.remove();
+  odswiezNumeryZaladunkow();
+  if(liczAktywneZaladunki()<5){
+    document.getElementById('btn-dodaj-zaladunek').style.display='block';
+  }
+  zapiszRoboczy();
+}
+
+function odswiezNumeryZaladunkow(){
+  var box=document.getElementById('zaladunki');
+  if(!box) return;
+  var karty=box.querySelectorAll('.card[id^="zaladunek-"]');
+  for(var i=0;i<karty.length;i++){
+    var lab=karty[i].querySelector('.zal-label');
+    if(lab) lab.textContent='ZAŁADUNEK '+(i+1);
+  }
+}
+
 // ===== PRODUKTY =====
 var PROGRAMY={
-  ON:[{nr:11,typ:'RZ',wsp:2},{nr:12,typ:'RZ',wsp:3},{nr:13,typ:'RZ',wsp:4},{nr:14,typ:'15',wsp:2},{nr:15,typ:'15',wsp:3},{nr:16,typ:'15',wsp:4},{nr:23,typ:'RZ',wsp:3},{nr:24,typ:'15',wsp:3},{nr:99,typ:'RZ',wsp:0,grawitacja:true}],
-  PB:[{nr:17,typ:'RZ',wsp:2},{nr:18,typ:'15',wsp:2},{nr:99,typ:'RZ',wsp:0,grawitacja:true}],
-  OP:[{nr:21,typ:'RZ',wsp:2},{nr:22,typ:'15',wsp:2}]
+  ON:[{nr:11,typ:'RZ',wsp:2},{nr:12,typ:'RZ',wsp:3},{nr:13,typ:'RZ',wsp:4},{nr:14,typ:'15',wsp:2},{nr:15,typ:'15',wsp:3},{nr:16,typ:'15',wsp:4},{nr:23,typ:'RZ',wsp:0},{nr:24,typ:'15',wsp:0},{nr:99,typ:'RZ',wsp:0,grawitacja:true}],
+  PB:[{nr:17,typ:'RZ',wsp:0},{nr:18,typ:'15',wsp:0},{nr:99,typ:'RZ',wsp:0,grawitacja:true}],
+  OP:[{nr:21,typ:'RZ',wsp:6},{nr:22,typ:'15',wsp:6}]
 };
 // FIX: produktCount musi być zawsze rosnący (UID), bo był używany jako element ID w DOM.
 // Stary kod robił produktCount-- przy usunięciu, co powodowało kolizje ID (dwa elementy
@@ -1759,6 +1868,9 @@ function resetForm(){
   // z elementami które mogłyby gdzieś jeszcze wisieć (np. w pamięci po wycofanej animacji).
   selectedProgs={};
   document.getElementById('btn-dodaj').style.display='block';
+  // Wyczysc sekcje zaladunkow (nowy model - commit 1 refactoru). zaladunekSeq NIE resetujemy.
+  var zalBox=document.getElementById('zaladunki'); if(zalBox) zalBox.innerHTML='';
+  var btnZal=document.getElementById('btn-dodaj-zaladunek'); if(btnZal) btnZal.style.display='block';
   document.getElementById('form-main').style.display='block';
   document.getElementById('ok-screen').style.display='none';
   // Wyczyść roboczy bufor przy nowym wpisie
