@@ -202,6 +202,11 @@ input[type=file]{display:none;}
       <button class="btn-add" onclick="dodajZaladunek()" id="btn-dodaj-zaladunek">+ Dodaj produkt</button>
     </div>
 
+    <!-- BILANS PALIWA - live (commit 3 refactoru). Renderowany miedzy zaladunki i rozladunki.
+         renderBilans() sam sprawdza widocznosc parent karty #zaladunki i nie pokazuje sie gdy
+         model jest ukryty (commit interim). Wlaczy sie automatycznie wraz z odkryciem sekcji w c5. -->
+    <div id="bilans" style="display:none;margin-top:14px;"></div>
+
     <!-- ROZLADUNKI U KLIENTOW - nowy model (commit 2 refactoru zal/rozl).
          display:none do czasu ukonczenia refactoru (commit 5). -->
     <datalist id="lista-klientow"></datalist>
@@ -735,6 +740,9 @@ function zapiszRoboczy(){
       lsSet('cysterna_roboczy',JSON.stringify(d));
       document.getElementById('draft-bar').classList.add('show');
     }
+    // Live bilans (commit 3 refactoru) - kazde oninput/onchange przechodzi przez zapiszRoboczy,
+    // wiec to jest centralny punkt synchronizacji bilansu z formularzem.
+    try{ renderBilans(); }catch(e){}
   }catch(e){}
 }
 function wczytajRoboczy(){
@@ -1625,6 +1633,120 @@ function odswiezNumeryRozladunkow(){
   }
 }
 
+// ===== BILANS PALIWA (commit 3 refactoru zal/rozl) =====
+// Agreguje zaladunki i rozladunki per paliwo i typ rozliczenia (RZ/15).
+// Bonus z programu rozladunku poszerza dopuszczalny rozladunek:
+//   nadwyzka_per_rozladunek = ilosc * bonus_programu / 100
+//   max_dopuszczalny = sum(zaladunkow) + sum(nadwyzek_rozladunkow)
+//   przekroczenie = sum(rozladunkow) > max_dopuszczalny (tol. 0.01L na floaty)
+// W commicie 4 to samo zrodlo posluzy do wyswietlenia nadwyzki w podsumowaniu produktu.
+
+// Helper: czy nowy model jest widoczny (parent .card #zaladunki nie ma display:none).
+// W commicie interim sekcje sa ukryte - bilans i walidacja w 'usnieniu'.
+function nowyModelAktywny(){
+  var zal=document.getElementById('zaladunki');
+  if(!zal) return false;
+  var card=zal.parentElement;
+  if(!card) return false;
+  return getComputedStyle(card).display!=='none';
+}
+
+// Formatuje litry: '12345,67 L' (przecinek - polska konwencja), '–' dla NaN.
+function fmtL(n){
+  if(typeof n!=='number'||isNaN(n)) return '–';
+  return (Math.round(n*100)/100).toString().replace('.',',')+' L';
+}
+
+function liczBilansPaliwa(){
+  var bilans={};
+  // Zaladunki - suma per paliwo (osobno RZ, osobno 15°C - to dwa rozne pomiary tej samej fizycznej masy).
+  var zalCards=document.querySelectorAll('#zaladunki .card[id^="zaladunek-"]');
+  Array.prototype.forEach.call(zalCards,function(card){
+    var zid=card.getAttribute('data-zid');
+    var pal=(document.getElementById('nz-paliwo-'+zid)||{}).value;
+    if(!pal) return;
+    var rz =parseLiczba((document.getElementById('nz-rz-'+zid)||{}).value); if(isNaN(rz)) rz=0;
+    var l15=parseLiczba((document.getElementById('nz-15-'+zid)||{}).value); if(isNaN(l15)) l15=0;
+    if(!bilans[pal]) bilans[pal]={zalRZ:0,zal15:0,sumRozRZ:0,sumRoz15:0,sumNadRZ:0,sumNad15:0};
+    bilans[pal].zalRZ+=rz;
+    bilans[pal].zal15+=l15;
+  });
+  // Rozladunki - suma per paliwo per typ rozliczenia + nadwyzka per rozladunek.
+  var rozCards=document.querySelectorAll('#rozladunki .card[id^="rozladunek-"]');
+  Array.prototype.forEach.call(rozCards,function(card){
+    var rid=card.getAttribute('data-rid');
+    var pal=(document.getElementById('nr-paliwo-'+rid)||{}).value;
+    if(!pal) return;
+    var ilosc=parseLiczba((document.getElementById('nr-ilosc-'+rid)||{}).value); if(isNaN(ilosc)) ilosc=0;
+    var typ=(document.getElementById('nr-typ-'+rid)||{}).value;
+    var prog=selectedRozProgs[rid];
+    var bonus=0; // L/100L
+    if(prog){
+      var pd=getProgData(pal,prog);
+      if(pd && !pd.grawitacja) bonus=pd.wsp; // wsp jest w L/100L (np. 4 dla programu 13)
+    }
+    var nadwyzka=ilosc*bonus/100;
+    if(!bilans[pal]) bilans[pal]={zalRZ:0,zal15:0,sumRozRZ:0,sumRoz15:0,sumNadRZ:0,sumNad15:0};
+    if(typ==='RZ'){
+      bilans[pal].sumRozRZ+=ilosc;
+      bilans[pal].sumNadRZ+=nadwyzka;
+    } else if(typ==='15'){
+      bilans[pal].sumRoz15+=ilosc;
+      bilans[pal].sumNad15+=nadwyzka;
+    }
+  });
+  Object.keys(bilans).forEach(function(p){
+    var b=bilans[p];
+    b.maxRZ=+(b.zalRZ+b.sumNadRZ).toFixed(2);
+    b.max15=+(b.zal15+b.sumNad15).toFixed(2);
+    // Pozostalo = ile fizycznie zostaje w cysternie = zaladunek - (rozladunek - nadwyzka)
+    b.pozRZ=+(b.zalRZ-(b.sumRozRZ-b.sumNadRZ)).toFixed(2);
+    b.poz15=+(b.zal15-(b.sumRoz15-b.sumNad15)).toFixed(2);
+    // Tolerancja 0.01L na bledy zaokraglen floatow.
+    b.przekroczenieRZ=b.sumRozRZ>b.maxRZ+0.01;
+    b.przekroczenie15=b.sumRoz15>b.max15+0.01;
+    b.przekroczenie=b.przekroczenieRZ||b.przekroczenie15;
+  });
+  return bilans;
+}
+
+function renderBilans(){
+  var box=document.getElementById('bilans');
+  if(!box) return;
+  // Schowaj gdy parent ukryty (commit interim) - nie pokazuj bilansu kierowcom uzywajacym starego modelu.
+  if(!nowyModelAktywny()){ box.style.display='none'; return; }
+  var bilans=liczBilansPaliwa();
+  var paliwa=Object.keys(bilans);
+  if(!paliwa.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='block';
+  var head='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:900;letter-spacing:1px;color:#64748b;text-transform:uppercase;margin-bottom:6px;">⚖️ Bilans paliwa (live)</div>';
+  box.innerHTML=head+paliwa.map(function(p){
+    var b=bilans[p];
+    var border=b.przekroczenie?'#dc2626':'#10b981';
+    var bg=b.przekroczenie?'#fef2f2':'#f0fdf4';
+    var warn=b.przekroczenie
+      ? '<div style="color:#b91c1c;font-weight:800;font-size:13px;margin-top:8px;border-top:1px solid #fecaca;padding-top:6px;">⚠️ Rozładunek większy niż dopuszczalny (załadunek + bonus z programów). Wysyłka zablokowana.</div>'
+      : '';
+    var rRZ=b.przekroczenieRZ?' style="color:#b91c1c;font-weight:800;"':'';
+    var r15=b.przekroczenie15?' style="color:#b91c1c;font-weight:800;"':'';
+    return '<div style="background:'+bg+';border-left:4px solid '+border+';border-radius:8px;padding:10px 12px;margin-bottom:8px;">'+
+      '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:16px;font-weight:900;color:#1e3a8a;margin-bottom:6px;">'+paliwoLabel(p)+'</div>'+
+      '<div class="row3" style="font-size:12px;gap:6px;">'+
+        '<div><div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.5px;">Załadowano</div>'+
+          '<div>RZ: <b>'+fmtL(b.zalRZ)+'</b></div>'+
+          '<div>15°C: <b>'+fmtL(b.zal15)+'</b></div></div>'+
+        '<div><div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.5px;">Rozładowano</div>'+
+          '<div'+rRZ+'>RZ: <b>'+fmtL(b.sumRozRZ)+'</b></div>'+
+          '<div'+r15+'>15°C: <b>'+fmtL(b.sumRoz15)+'</b></div></div>'+
+        '<div><div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.5px;">Pozostało</div>'+
+          '<div'+rRZ+'>RZ: <b>'+fmtL(b.pozRZ)+'</b></div>'+
+          '<div'+r15+'>15°C: <b>'+fmtL(b.poz15)+'</b></div></div>'+
+      '</div>'+
+      warn+
+    '</div>';
+  }).join('');
+}
+
 // ===== PRODUKTY =====
 var PROGRAMY={
   ON:[{nr:11,typ:'RZ',wsp:2},{nr:12,typ:'RZ',wsp:3},{nr:13,typ:'RZ',wsp:4},{nr:14,typ:'15',wsp:2},{nr:15,typ:'15',wsp:3},{nr:16,typ:'15',wsp:4},{nr:23,typ:'RZ',wsp:0},{nr:24,typ:'15',wsp:0},{nr:99,typ:'RZ',wsp:0,grawitacja:true}],
@@ -1826,6 +1948,23 @@ function waliduj(){
     // jest to normalna sytuacja (różne metody pomiaru/temperatury). Taka różnica
     // jest oznaczana jako oszczędność/nadwyżka, traktowana jako korzyść dla biura.
   });
+  // Walidacja bilansu paliwa (commit 3 refactoru zal/rozl).
+  // Aktywna tylko gdy nowy model jest widoczny (commit interim = ukryte, walidacja spi).
+  // W commicie 5 odkryjemy sekcje i ta walidacja wlaczy sie automatycznie.
+  try{
+    if(typeof nowyModelAktywny==='function' && nowyModelAktywny()){
+      var zalCount=document.querySelectorAll('#zaladunki .card[id^="zaladunek-"]').length;
+      var rozCount=document.querySelectorAll('#rozladunki .card[id^="rozladunek-"]').length;
+      if(zalCount>0 || rozCount>0){
+        var bilans=liczBilansPaliwa();
+        Object.keys(bilans).forEach(function(p){
+          var b=bilans[p];
+          if(b.przekroczenieRZ) bledy.push('Bilans '+paliwoLabel(p)+' (RZ): rozładunek '+fmtL(b.sumRozRZ)+' przekracza dopuszczalny '+fmtL(b.maxRZ)+' (załadunek + bonus z programów)');
+          if(b.przekroczenie15) bledy.push('Bilans '+paliwoLabel(p)+' (15°C): rozładunek '+fmtL(b.sumRoz15)+' przekracza dopuszczalny '+fmtL(b.max15)+' (załadunek + bonus z programów)');
+        });
+      }
+    }
+  }catch(e){ /* walidacja bilansu nie powinna walic walidacji glownej */ }
   return bledy;
 }
 
@@ -2112,6 +2251,8 @@ function resetForm(){
   // Wyczysc sekcje rozladunkow (nowy model - commit 2 refactoru). rozladunekSeq NIE resetujemy.
   var rozBox=document.getElementById('rozladunki'); if(rozBox) rozBox.innerHTML='';
   selectedRozProgs={};
+  // Bilans (commit 3 refactoru) - po wyczyszczeniu sekcji odswiez/ukryj.
+  try{ renderBilans(); }catch(e){}
   document.getElementById('form-main').style.display='block';
   document.getElementById('ok-screen').style.display='none';
   // Wyczyść roboczy bufor przy nowym wpisie
@@ -2930,6 +3071,7 @@ document.addEventListener('DOMContentLoaded',function(){
   try{ dodajProdukt(); }catch(e){ console.log('err:',e); }
   try{ renderMail(); }catch(e){ console.log('err:',e); }
   try{ renderListaKlientow(); }catch(e){ console.log('klienci datalist:',e); }
+  try{ renderBilans(); }catch(e){ console.log('bilans init:',e); }
   try{ sprawdzRoboczy(); }catch(e){}
   try{ pokazSetupJesliPotrzeba(); }catch(e){ console.log('setup:',e); }
   // Backend Cysterna - inicjalizacja po załadowaniu apki
