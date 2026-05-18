@@ -201,6 +201,15 @@ input[type=file]{display:none;}
       <button class="btn-add" onclick="dodajZaladunek()" id="btn-dodaj-zaladunek">+ Dodaj produkt</button>
     </div>
 
+    <!-- ROZLADUNKI U KLIENTOW - nowy model (commit 2 refactoru zal/rozl) -->
+    <datalist id="lista-klientow"></datalist>
+    <div class="card" style="border-left:4px solid #ea580c;margin-top:14px;">
+      <div class="card-title">📍 ROZŁADUNKI U KLIENTÓW</div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:8px;">Każdy zlew u klienta = osobny rekord. Bez limitu.</p>
+      <div id="rozladunki"></div>
+      <button class="btn-add" onclick="dodajRozladunek()" id="btn-dodaj-rozladunek">+ Dodaj rozładunek</button>
+    </div>
+
     <div id="produkty"></div>
     <button class="btn-add" onclick="dodajProdukt()" id="btn-dodaj">+ Dodaj produkt</button>
     <button class="btn" onclick="wyslij()" id="btn-wyslij">✓ WYŚLIJ DANE</button>
@@ -677,6 +686,21 @@ function zapiszRoboczy(){
         l15:    (document.getElementById('nz-15-'+zid)||{}).value||''
       });
     });
+    // Dump rozladunkow (nowy model - commit 2 refactoru)
+    var rozladunkiDraft=[];
+    var rozCards=document.querySelectorAll('#rozladunki .card[id^="rozladunek-"]');
+    Array.prototype.forEach.call(rozCards,function(card){
+      var rid=card.getAttribute('data-rid');
+      rozladunkiDraft.push({
+        klient: (document.getElementById('nr-klient-'+rid)||{}).value||'',
+        paliwo: (document.getElementById('nr-paliwo-'+rid)||{}).value||'',
+        program:selectedRozProgs[rid]||null,
+        ilosc:  (document.getElementById('nr-ilosc-'+rid)||{}).value||'',
+        typ:    (document.getElementById('nr-typ-'+rid)||{}).value||'',
+        temp:   (document.getElementById('nr-temp-'+rid)||{}).value||'',
+        godzina:(document.getElementById('nr-godzina-'+rid)||{}).value||''
+      });
+    });
     var d={
       kierowca:document.getElementById('kierowca').value,
       ciagnik:document.getElementById('ciagnik').value,
@@ -691,6 +715,7 @@ function zapiszRoboczy(){
       tankStanLicznika: document.getElementById('tank-stan-licznika').value,
       produkty:produktyDraft,
       zaladunki:zaladunkiDraft,
+      rozladunki:rozladunkiDraft,
       _ts:Date.now()
     };
     // Zapisuj jeśli cokolwiek istotnego jest wpisane
@@ -701,7 +726,10 @@ function zapiszRoboczy(){
     var hasZaladunki=zaladunkiDraft.some(function(z){
       return z.paliwo||z.wz||z.rz||z.l15;
     });
-    if(d.kierowca||d.ciagnik||d.wz||d.kms||d.kmk||hasProductData||hasZaladunki){
+    var hasRozladunki=rozladunkiDraft.some(function(r){
+      return r.klient||r.paliwo||r.program||r.ilosc||r.typ||r.temp||r.godzina;
+    });
+    if(d.kierowca||d.ciagnik||d.wz||d.kms||d.kmk||hasProductData||hasZaladunki||hasRozladunki){
       lsSet('cysterna_roboczy',JSON.stringify(d));
       document.getElementById('draft-bar').classList.add('show');
     }
@@ -768,6 +796,37 @@ function wczytajRoboczy(){
         var l15El=document.getElementById('nz-15-'+zid);     if(l15El) l15El.value=z.l15||'';
       });
     }
+    // Restore rozladunkow (nowy model - commit 2 refactoru). Po zaladunkach,
+    // zeby renderRozPaliwoSelect mial juz pelna liste paliw do wyboru.
+    if(d.rozladunki && d.rozladunki.length){
+      document.getElementById('rozladunki').innerHTML='';
+      selectedRozProgs={};
+      d.rozladunki.forEach(function(r){
+        dodajRozladunek();
+        var rid=rozladunekSeq;
+        var klEl=document.getElementById('nr-klient-'+rid); if(klEl) klEl.value=r.klient||'';
+        if(r.paliwo){
+          var palEl=document.getElementById('nr-paliwo-'+rid);
+          if(palEl){
+            // Jesli zapamietane paliwo nie wystepuje w aktualnych zaladunkach,
+            // dorzucamy je do selecta zeby restore zachowal wartosc (commit 3 zwaliduje niespojnosc).
+            var paliwa=pobierzPaliwaZZaladunkow();
+            if(paliwa.indexOf(r.paliwo)===-1){
+              var opt=document.createElement('option');
+              opt.value=r.paliwo; opt.textContent=paliwoLabel(r.paliwo);
+              palEl.appendChild(opt);
+            }
+            palEl.value=r.paliwo;
+            renderRozProgramy(rid);
+          }
+        }
+        if(r.program){ selRozProg(rid, r.program); }
+        var ilEl=document.getElementById('nr-ilosc-'+rid);   if(ilEl) ilEl.value=r.ilosc||'';
+        var tyEl=document.getElementById('nr-typ-'+rid);     if(tyEl) tyEl.value=r.typ||'';
+        var teEl=document.getElementById('nr-temp-'+rid);    if(teEl) teEl.value=r.temp||'';
+        var goEl=document.getElementById('nr-godzina-'+rid); if(goEl) goEl.value=r.godzina||'';
+      });
+    }
     document.getElementById('draft-bar').classList.remove('show');
     alert('✅ Wczytano zapisany wpis (włącznie z produktami).');
   }catch(e){ alert('⚠️ Nie udało się wczytać draftu: '+e.message); }
@@ -782,7 +841,10 @@ function sprawdzRoboczy(){
     var maZaladunki = d.zaladunki && d.zaladunki.length && d.zaladunki.some(function(z){
       return z.paliwo||z.wz||z.rz||z.l15;
     });
-    if(d.kierowca || d.wz || d.kms || d.kmk || maProdukty || maZaladunki){
+    var maRozladunki = d.rozladunki && d.rozladunki.length && d.rozladunki.some(function(r){
+      return r.klient||r.paliwo||r.program||r.ilosc||r.typ||r.temp||r.godzina;
+    });
+    if(d.kierowca || d.wz || d.kms || d.kmk || maProdukty || maZaladunki || maRozladunki){
       document.getElementById('draft-bar').classList.add('show');
     }
   }catch(e){}
@@ -1344,7 +1406,7 @@ function dodajZaladunek(){
       '<button class="btn-remove" onclick="usunZaladunek('+id+')">✕ Usuń</button>'+
     '</div>'+
     '<label style="margin-top:0">Produkt *</label>'+
-    '<select id="nz-paliwo-'+id+'" onchange="zapiszRoboczy()">'+
+    '<select id="nz-paliwo-'+id+'" onchange="refreshAllRozPaliwoSelects();zapiszRoboczy()">'+
       '<option value="">– wybierz –</option>'+
       '<option value="ON">ON – Olej napędowy</option>'+
       '<option value="PB">PB95 – Benzyna</option>'+
@@ -1374,6 +1436,8 @@ function usunZaladunek(id){
   if(liczAktywneZaladunki()<5){
     document.getElementById('btn-dodaj-zaladunek').style.display='block';
   }
+  // Lista paliw w rozładunkach mogła się zmienić - odśwież selecty.
+  try{ refreshAllRozPaliwoSelects(); }catch(e){}
   zapiszRoboczy();
 }
 
@@ -1384,6 +1448,178 @@ function odswiezNumeryZaladunkow(){
   for(var i=0;i<karty.length;i++){
     var lab=karty[i].querySelector('.zal-label');
     if(lab) lab.textContent='ZAŁADUNEK '+(i+1);
+  }
+}
+
+// ===== ROZLADUNKI U KLIENTOW (nowy model - commit 2 refactoru zal/rozl) =====
+// Kazdy rozladunek = osobny rekord: klient, paliwo (z zaladunkow), program, ilosc,
+// typ rozliczenia (RZ/15), temp, godzina (opcjonalna). Brak limitu kart.
+// Lista paliw w selecte rozladunku jest dynamiczna - tylko paliwa obecne w #zaladunki.
+var rozladunekSeq=0;
+var selectedRozProgs={};  // {id -> nr programu}
+
+// Pamiec klientow (localStorage LRU max 50). Datalist autouzupelnia w UI.
+function getKlienci(){
+  try{ var s=lsGet('cysterna_klienci'); if(s){ var a=JSON.parse(s); if(Array.isArray(a)) return a; } }catch(e){}
+  return [];
+}
+function zapamietajKlienta(nazwa){
+  nazwa=(nazwa||'').trim();
+  if(!nazwa) return;
+  var arr=getKlienci().filter(function(x){ return x!==nazwa; });
+  arr.unshift(nazwa);
+  if(arr.length>50) arr=arr.slice(0,50);
+  try{ lsSet('cysterna_klienci', JSON.stringify(arr)); }catch(e){}
+  renderListaKlientow();
+}
+function renderListaKlientow(){
+  var dl=document.getElementById('lista-klientow'); if(!dl) return;
+  dl.innerHTML=getKlienci().map(function(k){
+    return '<option value="'+String(k).replace(/"/g,'&quot;')+'">';
+  }).join('');
+}
+
+function liczAktywneRozladunki(){
+  var box=document.getElementById('rozladunki'); if(!box) return 0;
+  return box.querySelectorAll('.card[id^="rozladunek-"]').length;
+}
+
+// Lista paliw obecnych w #zaladunki; pusta -> fallback ON/PB/OP zeby kierowca mogl wpisac
+// rozladunek zanim wypelni zaladunek (commit 3 walidacja niespojnosci).
+function pobierzPaliwaZZaladunkow(){
+  var paliwa={};
+  var cards=document.querySelectorAll('#zaladunki .card[id^="zaladunek-"]');
+  Array.prototype.forEach.call(cards,function(card){
+    var zid=card.getAttribute('data-zid');
+    var v=(document.getElementById('nz-paliwo-'+zid)||{}).value;
+    if(v) paliwa[v]=true;
+  });
+  var keys=Object.keys(paliwa);
+  return keys.length?keys:['ON','PB','OP'];
+}
+
+function paliwoLabel(p){
+  if(p==='ON') return 'ON – Olej napędowy';
+  if(p==='PB') return 'PB95 – Benzyna';
+  if(p==='OP') return 'Olej opałowy';
+  return p;
+}
+
+function renderRozPaliwoSelect(id){
+  var sel=document.getElementById('nr-paliwo-'+id); if(!sel) return;
+  var current=sel.value;
+  var paliwa=pobierzPaliwaZZaladunkow();
+  sel.innerHTML='<option value="">– wybierz –</option>'+paliwa.map(function(p){
+    var s=(p===current)?' selected':'';
+    return '<option value="'+p+'"'+s+'>'+paliwoLabel(p)+'</option>';
+  }).join('');
+  // Jesli wczesniej wybrane paliwo zniknelo z zaladunkow - czyscimy te selecta i program
+  if(current && paliwa.indexOf(current)===-1){
+    sel.value='';
+    selectedRozProgs[id]=null;
+    renderRozProgramy(id);
+  }
+}
+
+function refreshAllRozPaliwoSelects(){
+  var cards=document.querySelectorAll('#rozladunki .card[id^="rozladunek-"]');
+  Array.prototype.forEach.call(cards,function(card){
+    var rid=card.getAttribute('data-rid');
+    renderRozPaliwoSelect(rid);
+  });
+}
+
+function renderRozProgramy(id){
+  var palEl=document.getElementById('nr-paliwo-'+id);
+  var cont=document.getElementById('progi-roz-'+id);
+  if(!cont) return;
+  var pal=palEl?palEl.value:'';
+  if(!selectedRozProgs[id]) selectedRozProgs[id]=null;
+  if(!pal){ cont.innerHTML='<p style="color:#94a3b8;font-size:13px;grid-column:1/-1;">Najpierw wybierz paliwo</p>'; return; }
+  cont.innerHTML='';
+  PROGRAMY[pal].forEach(function(p){
+    var btn=document.createElement('div');
+    btn.className='prog'+(selectedRozProgs[id]===p.nr?' on':'');
+    btn.id='prog-roz-'+id+'-'+p.nr;
+    if(p.grawitacja){
+      btn.innerHTML='GRAW';
+      btn.style.background='#fef3c7'; btn.style.borderColor='#f59e0b'; btn.style.color='#92400e';
+    } else {
+      btn.innerHTML=p.nr+'<br><span style="font-size:10px;font-weight:400;">'+p.typ+'</span>';
+    }
+    btn.onclick=function(){ selRozProg(id,p.nr); };
+    cont.appendChild(btn);
+  });
+}
+
+function selRozProg(id, nr){
+  selectedRozProgs[id]=nr;
+  var palEl=document.getElementById('nr-paliwo-'+id);
+  var pal=palEl?palEl.value:'';
+  if(!pal) return;
+  PROGRAMY[pal].forEach(function(p){
+    var el=document.getElementById('prog-roz-'+id+'-'+p.nr);
+    if(el) el.className='prog'+(p.nr===nr?' on':'');
+  });
+  zapiszRoboczy();
+}
+
+function dodajRozladunek(){
+  rozladunekSeq++;
+  var id=rozladunekSeq;
+  selectedRozProgs[id]=null;
+  var nrWyswietlany=liczAktywneRozladunki()+1;
+  var div=document.createElement('div');
+  div.className='card';
+  div.id='rozladunek-'+id;
+  div.style.borderLeft='4px solid #ea580c';
+  div.setAttribute('data-rid',id);
+  div.innerHTML='<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">'+
+      '<span class="roz-label">ROZŁADUNEK '+nrWyswietlany+'</span>'+
+      '<button class="btn-remove" onclick="usunRozladunek('+id+')">✕ Usuń</button>'+
+    '</div>'+
+    '<label style="margin-top:0">Klient *</label>'+
+    '<input type="text" id="nr-klient-'+id+'" list="lista-klientow" placeholder="np. Stacja Orlen Poznań" autocomplete="off" oninput="zapiszRoboczy()" onchange="zapamietajKlienta(this.value);zapiszRoboczy()">'+
+    '<label>Paliwo *</label>'+
+    '<select id="nr-paliwo-'+id+'" onchange="renderRozProgramy('+id+');zapiszRoboczy()">'+
+      '<option value="">– wybierz –</option>'+
+    '</select>'+
+    '<label>Program rozlewania *</label>'+
+    '<div class="prog-grid" id="progi-roz-'+id+'"><p style="color:#94a3b8;font-size:13px;grid-column:1/-1;">Najpierw wybierz paliwo</p></div>'+
+    '<div class="row2" style="margin-top:8px;">'+
+      '<div><label style="margin-top:0">Ilość [L] *</label>'+
+        '<input type="text" id="nr-ilosc-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
+      '<div><label style="margin-top:0">Typ rozliczenia *</label>'+
+        '<select id="nr-typ-'+id+'" onchange="zapiszRoboczy()">'+
+          '<option value="">– wybierz –</option>'+
+          '<option value="RZ">RZ (rzeczywista)</option>'+
+          '<option value="15">15°C</option>'+
+        '</select></div>'+
+    '</div>'+
+    '<div class="row2" style="margin-top:8px;">'+
+      '<div><label style="margin-top:0">Temperatura [°C] *</label>'+
+        '<input type="text" id="nr-temp-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,-]*" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
+      '<div><label style="margin-top:0">Godzina</label>'+
+        '<input type="time" id="nr-godzina-'+id+'" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
+    '</div>';
+  document.getElementById('rozladunki').appendChild(div);
+  renderRozPaliwoSelect(id);
+  odswiezNumeryRozladunkow();
+}
+
+function usunRozladunek(id){
+  var el=document.getElementById('rozladunek-'+id); if(el) el.remove();
+  delete selectedRozProgs[id];
+  odswiezNumeryRozladunkow();
+  zapiszRoboczy();
+}
+
+function odswiezNumeryRozladunkow(){
+  var box=document.getElementById('rozladunki'); if(!box) return;
+  var karty=box.querySelectorAll('.card[id^="rozladunek-"]');
+  for(var i=0;i<karty.length;i++){
+    var lab=karty[i].querySelector('.roz-label');
+    if(lab) lab.textContent='ROZŁADUNEK '+(i+1);
   }
 }
 
@@ -1871,6 +2107,9 @@ function resetForm(){
   // Wyczysc sekcje zaladunkow (nowy model - commit 1 refactoru). zaladunekSeq NIE resetujemy.
   var zalBox=document.getElementById('zaladunki'); if(zalBox) zalBox.innerHTML='';
   var btnZal=document.getElementById('btn-dodaj-zaladunek'); if(btnZal) btnZal.style.display='block';
+  // Wyczysc sekcje rozladunkow (nowy model - commit 2 refactoru). rozladunekSeq NIE resetujemy.
+  var rozBox=document.getElementById('rozladunki'); if(rozBox) rozBox.innerHTML='';
+  selectedRozProgs={};
   document.getElementById('form-main').style.display='block';
   document.getElementById('ok-screen').style.display='none';
   // Wyczyść roboczy bufor przy nowym wpisie
@@ -2688,6 +2927,7 @@ document.addEventListener('DOMContentLoaded',function(){
   try{ sprawdzCzyTrzebaBackup(); }catch(e){ console.log('backup check:',e); }
   try{ dodajProdukt(); }catch(e){ console.log('err:',e); }
   try{ renderMail(); }catch(e){ console.log('err:',e); }
+  try{ renderListaKlientow(); }catch(e){ console.log('klienci datalist:',e); }
   try{ sprawdzRoboczy(); }catch(e){}
   try{ pokazSetupJesliPotrzeba(); }catch(e){ console.log('setup:',e); }
   // Backend Cysterna - inicjalizacja po załadowaniu apki
