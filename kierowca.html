@@ -193,17 +193,19 @@ input[type=file]{display:none;}
       </div>
     </div>
 
-    <!-- ZALADUNKI NA NAFTOBAZIE - nowy model (commit 1 refactoru zal/rozl) -->
-    <div class="card" style="border-left:4px solid #2563eb;margin-top:14px;">
+    <!-- ZALADUNKI NA NAFTOBAZIE - nowy model (commit 1 refactoru zal/rozl).
+         display:none do czasu ukonczenia refactoru (commit 5) - kierowcy uzywaja jeszcze starej sekcji #produkty. -->
+    <div class="card" style="border-left:4px solid #2563eb;margin-top:14px;display:none;">
       <div class="card-title">📋 ZAŁADUNKI NA NAFTOBAZIE</div>
       <p style="font-size:12px;color:#64748b;margin-bottom:8px;">Wpisz dane z dokumentu WZ PERN. Załadunek = cała cysterna (bez podziału na komory).</p>
       <div id="zaladunki"></div>
       <button class="btn-add" onclick="dodajZaladunek()" id="btn-dodaj-zaladunek">+ Dodaj produkt</button>
     </div>
 
-    <!-- ROZLADUNKI U KLIENTOW - nowy model (commit 2 refactoru zal/rozl) -->
+    <!-- ROZLADUNKI U KLIENTOW - nowy model (commit 2 refactoru zal/rozl).
+         display:none do czasu ukonczenia refactoru (commit 5). -->
     <datalist id="lista-klientow"></datalist>
-    <div class="card" style="border-left:4px solid #ea580c;margin-top:14px;">
+    <div class="card" style="border-left:4px solid #ea580c;margin-top:14px;display:none;">
       <div class="card-title">📍 ROZŁADUNKI U KLIENTÓW</div>
       <p style="font-size:12px;color:#64748b;margin-bottom:8px;">Każdy zlew u klienta = osobny rekord. Bez limitu.</p>
       <div id="rozladunki"></div>
