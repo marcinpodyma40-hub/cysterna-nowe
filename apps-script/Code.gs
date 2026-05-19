@@ -18,6 +18,7 @@ const SHEET_ID = '1PSgKxHIP-hN9-urvQ9CIBcGyMB_kMA-kFvWlg3TVX-8';
 
 const SHEET_TRIPS    = 'Wpisy';
 const SHEET_PRODUCTS = 'Produkty';
+const SHEET_ROZLADUNKI = 'Rozladunki';
 
 const HEADERS_TRIPS = [
   'Timestamp','Czas utworzenia','Data','Akcja','Wersja','Koryguje TS','Powód korekty',
@@ -37,6 +38,11 @@ const HEADERS_PRODUCTS = [
   'Norma ubytek [L]','Różnica [L]','Różnica netto [L]',
   'Nadwyżka','Nadwyżka ile [L]','Status','Powód ubytku'
 ];
+
+// Naglowki nowej zakladki dla pojedynczych rozladunkow (c5 refactoru zal/rozl).
+// Timestamp jest FK do "Wpisy" (analogicznie do HEADERS_PRODUCTS) - pozwala spiac
+// rozladunki z trasa-headerem po wartosci data.ts wyslanej przez front.
+const HEADERS_ROZLADUNKI = ['Timestamp', 'Data', 'Kierowca', 'Litry', 'Program'];
 
 function getOrCreateSheet(ss, name) {
   let sheet = ss.getSheetByName(name);
@@ -78,6 +84,12 @@ function buildRow(sheetHeaders, dict) {
 }
 
 function doPost(e) {
+  // Routing po data.action - parsujemy wczesnie zeby handleRozladunek mogl wziac wlasny
+  // lock (osobno od legacy Wpisy/Produkty). Inne action lub brak -> legacy flow ponizej.
+  let earlyData;
+  try { earlyData = JSON.parse(e.postData.contents); } catch (err) { earlyData = {}; }
+  if (earlyData.action === 'rozladunek') return handleRozladunek(earlyData);
+
   // Serializuje rownolegle wywolania web app - bez tego dwa POSTy moga
   // przeplesc appendRow/setValues i rozjechac FK po Timestamp.
   const lock = LockService.getScriptLock();
@@ -165,6 +177,35 @@ function doPost(e) {
         trips:   1,
         products: produkty.length
       }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ result: 'error', msg: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Zapis pojedynczego rozladunku do zakladki "Rozladunki" (c5 refactoru zal/rozl).
+// Wlasny LockService - kazdy rozladunek to osobny POST z frontu (1:N do trasy),
+// zeby zwiekszyc paralelizm i nie blokowac legacy Wpisy/Produkty flow.
+function handleRozladunek(data) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = ss.getSheetByName(SHEET_ROZLADUNKI);
+    if (!sheet) {
+      sheet = ss.insertSheet(SHEET_ROZLADUNKI);
+      sheet.appendRow(HEADERS_ROZLADUNKI);
+      sheet.getRange(1, 1, 1, HEADERS_ROZLADUNKI.length)
+           .setFontWeight('bold').setBackground('#0f1f3d').setFontColor('#ffffff');
+      sheet.setFrozenRows(1);
+    }
+    sheet.appendRow([data.ts, data.data, data.kierowca, data.litry, data.program]);
+    return ContentService
+      .createTextOutput(JSON.stringify({ result: 'ok' }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService
