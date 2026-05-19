@@ -1647,7 +1647,7 @@ function odswiezNumeryRozladunkow(){
 // ===== BILANS PALIWA (commit 3 refactoru zal/rozl) =====
 // Agreguje zaladunki i rozladunki per paliwo i typ rozliczenia (RZ/15).
 // Bonus z programu rozladunku poszerza dopuszczalny rozladunek:
-//   nadwyzka_per_rozladunek = ilosc * bonus_programu / 100
+//   nadwyzka_per_rozladunek = ilosc * bonus_programu / 1000  (wsp w L/1000L - litry na 1000L rozladunku)
 //   max_dopuszczalny = sum(zaladunkow) + sum(nadwyzek_rozladunkow)
 //   przekroczenie = sum(rozladunkow) > max_dopuszczalny (tol. 0.01L na floaty)
 // W commicie 4 to samo zrodlo posluzy do wyswietlenia nadwyzki w podsumowaniu produktu.
@@ -1691,12 +1691,12 @@ function liczBilansPaliwa(){
     var ilosc=parseLiczba((document.getElementById('nr-ilosc-'+rid)||{}).value); if(isNaN(ilosc)) ilosc=0;
     var typ=(document.getElementById('nr-typ-'+rid)||{}).value;
     var prog=selectedRozProgs[rid];
-    var bonus=0; // L/100L
+    var bonus=0; // L/1000L
     if(prog){
       var pd=getProgData(pal,prog);
-      if(pd && !pd.grawitacja) bonus=pd.wsp; // wsp jest w L/100L (np. 4 dla programu 13)
+      if(pd && !pd.grawitacja) bonus=pd.wsp; // wsp jest w L/1000L (np. 4 dla programu 13 = 4L bonusu na 1000L rozladunku)
     }
-    var nadwyzka=ilosc*bonus/100;
+    var nadwyzka=ilosc*bonus/1000;
     if(!bilans[pal]) bilans[pal]={zalRZ:0,zal15:0,sumRozRZ:0,sumRoz15:0,sumNadRZ:0,sumNad15:0};
     if(typ==='RZ'){
       bilans[pal].sumRozRZ+=ilosc;
@@ -1759,7 +1759,7 @@ function renderBilans(){
 }
 
 // ===== NADWYZKA PER ROZLADUNEK (commit 4 refactoru zal/rozl) =====
-// Nadwyzka = ilosc_rozladunku * bonus_programu / 100 (np. 9000L program 12, bonus 3 -> 270 L).
+// Nadwyzka = ilosc_rozladunku * bonus_programu / 1000 (np. 9000L program 12, bonus 3 L/1000L -> 27 L).
 // Grawitacja (program 99) i programy z wsp=0 (17/18/23/24) daja nadwyzke = 0 - badge schowany.
 // Liczone per karta rozladunku (niezalezne od liczBilansPaliwa zeby badge nie wymagal pelnego renderu).
 
@@ -1774,7 +1774,7 @@ function liczNadwyzkeRozladunku(rid){
   if(pd.grawitacja) return {nadwyzka:0,bonus:0,ok:true};
   var ilosc=parseLiczba((document.getElementById('nr-ilosc-'+rid)||{}).value);
   if(isNaN(ilosc)||ilosc<=0) return {nadwyzka:0,bonus:pd.wsp,ok:false};
-  var nadwyzka=ilosc*pd.wsp/100;
+  var nadwyzka=ilosc*pd.wsp/1000;
   return {nadwyzka:+nadwyzka.toFixed(2),bonus:pd.wsp,ok:true};
 }
 
