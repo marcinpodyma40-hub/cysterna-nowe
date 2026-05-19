@@ -207,6 +207,12 @@ input[type=file]{display:none;}
          model jest ukryty (commit interim). Wlaczy sie automatycznie wraz z odkryciem sekcji w c5. -->
     <div id="bilans" style="display:none;margin-top:14px;"></div>
 
+    <!-- PODSUMOWANIE PRODUKTU - sumarycznie per paliwo z nadwyzka (commit 4 refactoru).
+         Render w renderPodsumowanie() - SWIADOMIE osobna funkcja od renderBilans, zeby
+         pozniejsza poprawka bilansu nie wymuszala podwojnej edycji. Te same dane zrodlowe
+         (liczBilansPaliwa) ale niezalezny widok i niezalezny lifecycle. -->
+    <div id="podsumowanie" style="display:none;margin-top:14px;"></div>
+
     <!-- ROZLADUNKI U KLIENTOW - nowy model (commit 2 refactoru zal/rozl).
          display:none do czasu ukonczenia refactoru (commit 5). -->
     <datalist id="lista-klientow"></datalist>
@@ -743,6 +749,9 @@ function zapiszRoboczy(){
     // Live bilans (commit 3 refactoru) - kazde oninput/onchange przechodzi przez zapiszRoboczy,
     // wiec to jest centralny punkt synchronizacji bilansu z formularzem.
     try{ renderBilans(); }catch(e){}
+    // Live podsumowanie + badge nadwyzek (commit 4 refactoru).
+    try{ renderPodsumowanie(); }catch(e){}
+    try{ refreshAllNadwyzkaBadges(); }catch(e){}
   }catch(e){}
 }
 function wczytajRoboczy(){
@@ -1611,7 +1620,9 @@ function dodajRozladunek(){
         '<input type="text" id="nr-temp-'+id+'" placeholder="0" inputmode="decimal" pattern="[0-9.,]*" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
       '<div><label style="margin-top:0">Godzina</label>'+
         '<input type="time" id="nr-godzina-'+id+'" autocomplete="off" oninput="zapiszRoboczy()"></div>'+
-    '</div>';
+    '</div>'+
+    // Badge nadwyzki (commit 4 refactoru) - renderNadwyzkaBadge wstawia tu tekst gdy bonus>0.
+    '<div id="roz-nadwyzka-'+id+'" style="display:none;margin-top:10px;"></div>';
   document.getElementById('rozladunki').appendChild(div);
   renderRozPaliwoSelect(id);
   odswiezNumeryRozladunkow();
@@ -1743,6 +1754,94 @@ function renderBilans(){
           '<div'+r15+'>15°C: <b>'+fmtL(b.poz15)+'</b></div></div>'+
       '</div>'+
       warn+
+    '</div>';
+  }).join('');
+}
+
+// ===== NADWYZKA PER ROZLADUNEK (commit 4 refactoru zal/rozl) =====
+// Nadwyzka = ilosc_rozladunku * bonus_programu / 100 (np. 9000L program 12, bonus 3 -> 270 L).
+// Grawitacja (program 99) i programy z wsp=0 (17/18/23/24) daja nadwyzke = 0 - badge schowany.
+// Liczone per karta rozladunku (niezalezne od liczBilansPaliwa zeby badge nie wymagal pelnego renderu).
+
+function liczNadwyzkeRozladunku(rid){
+  var pal=(document.getElementById('nr-paliwo-'+rid)||{}).value;
+  if(!pal) return {nadwyzka:0,bonus:0,ok:false};
+  var prog=selectedRozProgs[rid];
+  if(!prog) return {nadwyzka:0,bonus:0,ok:false};
+  var pd=getProgData(pal,prog);
+  if(!pd) return {nadwyzka:0,bonus:0,ok:false};
+  // Grawitacja - zaden bonus, badge ukryty (caller pominie).
+  if(pd.grawitacja) return {nadwyzka:0,bonus:0,ok:true};
+  var ilosc=parseLiczba((document.getElementById('nr-ilosc-'+rid)||{}).value);
+  if(isNaN(ilosc)||ilosc<=0) return {nadwyzka:0,bonus:pd.wsp,ok:false};
+  var nadwyzka=ilosc*pd.wsp/100;
+  return {nadwyzka:+nadwyzka.toFixed(2),bonus:pd.wsp,ok:true};
+}
+
+function renderNadwyzkaBadge(rid){
+  var box=document.getElementById('roz-nadwyzka-'+rid);
+  if(!box) return;
+  var info=liczNadwyzkeRozladunku(rid);
+  if(!info.ok || info.nadwyzka<=0){
+    box.style.display='none';
+    box.innerHTML='';
+    return;
+  }
+  box.style.display='block';
+  box.innerHTML='<span style="display:inline-block;background:#f3e8ff;color:#6b21a8;border:1px solid #d8b4fe;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;">+ Nadwyżka: '+fmtL(info.nadwyzka)+' (bonus '+info.bonus+'%)</span>';
+}
+
+function refreshAllNadwyzkaBadges(){
+  var cards=document.querySelectorAll('#rozladunki .card[id^="rozladunek-"]');
+  Array.prototype.forEach.call(cards,function(card){
+    var rid=card.getAttribute('data-rid');
+    renderNadwyzkaBadge(rid);
+  });
+}
+
+// ===== PODSUMOWANIE PRODUKTU (commit 4 refactoru zal/rozl) =====
+// Tabelaryczny widok per paliwo: ZALADOWANO / ROZLADOWANO / NADWYZKA / POZOSTALO,
+// kazdy z RZ i 15°C. NADWYZKA to suma bonusow z programow rozladunkow.
+// SWIADOMIE osobna funkcja od renderBilans - inny widok, inny lifecycle, mozliwosc
+// niezaleznych poprawek pozniej. Wspolne tylko zrodlo danych (liczBilansPaliwa).
+function renderPodsumowanie(){
+  var box=document.getElementById('podsumowanie');
+  if(!box) return;
+  if(!nowyModelAktywny()){ box.style.display='none'; return; }
+  var bilans=liczBilansPaliwa();
+  var paliwa=Object.keys(bilans);
+  if(!paliwa.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='block';
+  var head='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:900;letter-spacing:1px;color:#64748b;text-transform:uppercase;margin-bottom:6px;">📊 Podsumowanie per produkt</div>';
+  box.innerHTML=head+paliwa.map(function(p){
+    var b=bilans[p];
+    var border=b.przekroczenie?'#dc2626':'#6b21a8';
+    var rRZ=b.przekroczenieRZ?' style="color:#b91c1c;font-weight:800;"':'';
+    var r15=b.przekroczenie15?' style="color:#b91c1c;font-weight:800;"':'';
+    return '<div style="background:#fafafa;border:1px solid #e2e8f0;border-left:4px solid '+border+';border-radius:8px;padding:12px;margin-bottom:8px;">'+
+      '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:17px;font-weight:900;color:#1e3a8a;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-bottom:8px;">'+paliwoLabel(p)+'</div>'+
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;">'+
+        '<tr>'+
+          '<td style="padding:4px 0;color:#64748b;font-weight:700;width:38%;">ZAŁADOWANO</td>'+
+          '<td style="text-align:right;padding:4px 0;">RZ: <b>'+fmtL(b.zalRZ)+'</b></td>'+
+          '<td style="text-align:right;padding:4px 0 4px 12px;">15°C: <b>'+fmtL(b.zal15)+'</b></td>'+
+        '</tr>'+
+        '<tr>'+
+          '<td style="padding:4px 0;color:#64748b;font-weight:700;">ROZŁADOWANO</td>'+
+          '<td style="text-align:right;padding:4px 0;"'+rRZ+'>RZ: <b>'+fmtL(b.sumRozRZ)+'</b></td>'+
+          '<td style="text-align:right;padding:4px 0 4px 12px;"'+r15+'>15°C: <b>'+fmtL(b.sumRoz15)+'</b></td>'+
+        '</tr>'+
+        '<tr>'+
+          '<td style="padding:4px 0;color:#6b21a8;font-weight:700;">NADWYŻKA</td>'+
+          '<td style="text-align:right;padding:4px 0;color:#6b21a8;">RZ: <b>'+fmtL(b.sumNadRZ)+'</b></td>'+
+          '<td style="text-align:right;padding:4px 0 4px 12px;color:#6b21a8;">15°C: <b>'+fmtL(b.sumNad15)+'</b></td>'+
+        '</tr>'+
+        '<tr>'+
+          '<td style="padding:4px 0;color:#64748b;font-weight:700;border-top:1px solid #e2e8f0;">POZOSTAŁO</td>'+
+          '<td style="text-align:right;padding:4px 0;border-top:1px solid #e2e8f0;"'+rRZ+'>RZ: <b>'+fmtL(b.pozRZ)+'</b></td>'+
+          '<td style="text-align:right;padding:4px 0 4px 12px;border-top:1px solid #e2e8f0;"'+r15+'>15°C: <b>'+fmtL(b.poz15)+'</b></td>'+
+        '</tr>'+
+      '</table>'+
     '</div>';
   }).join('');
 }
@@ -2253,6 +2352,9 @@ function resetForm(){
   selectedRozProgs={};
   // Bilans (commit 3 refactoru) - po wyczyszczeniu sekcji odswiez/ukryj.
   try{ renderBilans(); }catch(e){}
+  // Podsumowanie + badge nadwyzek (commit 4 refactoru) - tez czyscimy do stanu pustego.
+  try{ renderPodsumowanie(); }catch(e){}
+  try{ refreshAllNadwyzkaBadges(); }catch(e){}
   document.getElementById('form-main').style.display='block';
   document.getElementById('ok-screen').style.display='none';
   // Wyczyść roboczy bufor przy nowym wpisie
@@ -3072,6 +3174,8 @@ document.addEventListener('DOMContentLoaded',function(){
   try{ renderMail(); }catch(e){ console.log('err:',e); }
   try{ renderListaKlientow(); }catch(e){ console.log('klienci datalist:',e); }
   try{ renderBilans(); }catch(e){ console.log('bilans init:',e); }
+  try{ renderPodsumowanie(); }catch(e){ console.log('podsumowanie init:',e); }
+  try{ refreshAllNadwyzkaBadges(); }catch(e){ console.log('nadwyzka badges init:',e); }
   try{ sprawdzRoboczy(); }catch(e){}
   try{ pokazSetupJesliPotrzeba(); }catch(e){ console.log('setup:',e); }
   // Backend Cysterna - inicjalizacja po załadowaniu apki
