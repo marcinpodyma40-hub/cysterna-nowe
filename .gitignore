@@ -1,0 +1,6 @@
+# Narzedzia lokalne (nie czesc projektu)
+.claude/
+.playwright-mcp/
+
+# Lokalny zrzut ekranu, nie wdrazany
+google-home.png
